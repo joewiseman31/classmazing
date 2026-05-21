@@ -1,0 +1,2322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="A projected, customizable digital clip chart for elementary classrooms. Data, parent-friendly daily reports, and the warmth of a real clip chart.">
+<meta name="theme-color" content="#FF6B9D">
+<title>Classmazing — Digital Clip Chart for Classrooms</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Patrick+Hand&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #FFF8DC;
+    --bg-pattern: rgba(255, 182, 193, 0.35);
+    --surface: #FFFFFF;
+    --ink: #2C2A4A;
+    --ink-soft: #6B6783;
+    --accent: #FF6B9D;
+    --accent-soft: #FFD1DC;
+    --shadow: rgba(44, 42, 74, 0.12);
+    --shadow-strong: rgba(44, 42, 74, 0.22);
+    --level-1: #B985E9;
+    --level-2: #5DA8E0;
+    --level-3: #6BC076;
+    --level-4: #FFD93D;
+    --level-5: #FF7F6E;
+    --rainbow-1: #FF6B9D;
+    --rainbow-2: #FFB347;
+    --rainbow-3: #FFD93D;
+    --rainbow-4: #6BC076;
+    --rainbow-5: #5DA8E0;
+    --rainbow-6: #B985E9;
+  }
+
+  body.theme-boho {
+    --bg: #F4E9D8;
+    --bg-pattern: rgba(201, 123, 93, 0.08);
+    --surface: #FBF3E4;
+    --ink: #2D2A26;
+    --ink-soft: #6B6259;
+    --accent: #C97B5D;
+    --accent-soft: #E8B89F;
+    --level-1: #D4A574;
+    --level-2: #A8C49D;
+    --level-3: #E8B89F;
+    --level-4: #C99A7A;
+    --level-5: #B07D62;
+  }
+
+  body.theme-jungle {
+    --bg: #EDF6E9;
+    --bg-pattern: rgba(90, 138, 62, 0.1);
+    --surface: #FFFFFF;
+    --ink: #1F3D2B;
+    --ink-soft: #5C7466;
+    --accent: #5A8A3E;
+    --accent-soft: #B8D7A0;
+    --level-1: #FFD93D;
+    --level-2: #88C58A;
+    --level-3: #5A8A3E;
+    --level-4: #C68A4E;
+    --level-5: #8B4513;
+  }
+
+  body.theme-ocean {
+    --bg: #E0F4FA;
+    --bg-pattern: rgba(54, 138, 184, 0.15);
+    --surface: #FFFFFF;
+    --ink: #1B3A4B;
+    --ink-soft: #4F6B7A;
+    --accent: #2E86AB;
+    --accent-soft: #A8DADC;
+    --level-1: #F4D35E;
+    --level-2: #87CEEB;
+    --level-3: #5BA9D0;
+    --level-4: #F4845F;
+    --level-5: #E63946;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Fredoka', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background-color: var(--bg);
+    background-image:
+      radial-gradient(circle at 20% 20%, var(--bg-pattern) 3px, transparent 4px),
+      radial-gradient(circle at 70% 60%, var(--bg-pattern) 3px, transparent 4px),
+      radial-gradient(circle at 40% 80%, var(--bg-pattern) 3px, transparent 4px);
+    background-size: 80px 80px, 100px 100px, 60px 60px;
+    color: var(--ink);
+    min-height: 100vh;
+    padding: 20px 28px 32px;
+    -webkit-font-smoothing: antialiased;
+    transition: background-color 0.3s ease;
+  }
+
+  .bunting {
+    max-width: 1280px;
+    margin: 0 auto 18px;
+    height: 8px;
+    background: linear-gradient(90deg,
+      var(--rainbow-1, #FF6B9D) 0%, var(--rainbow-1, #FF6B9D) 16.66%,
+      var(--rainbow-2, #FFB347) 16.66%, var(--rainbow-2, #FFB347) 33.33%,
+      var(--rainbow-3, #FFD93D) 33.33%, var(--rainbow-3, #FFD93D) 50%,
+      var(--rainbow-4, #6BC076) 50%, var(--rainbow-4, #6BC076) 66.66%,
+      var(--rainbow-5, #5DA8E0) 66.66%, var(--rainbow-5, #5DA8E0) 83.33%,
+      var(--rainbow-6, #B985E9) 83.33%, var(--rainbow-6, #B985E9) 100%);
+    border-radius: 999px;
+    box-shadow: 0 3px 0 var(--shadow);
+  }
+
+  body.theme-boho .bunting,
+  body.theme-jungle .bunting,
+  body.theme-ocean .bunting { display: none; }
+
+  header {
+    max-width: 1280px;
+    margin: 0 auto 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+
+  .title-block { position: relative; }
+
+  .class-switcher {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .title-block h1 {
+    font-family: 'Fredoka', 'Patrick Hand', sans-serif;
+    font-size: clamp(32px, 4.5vw, 54px);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    line-height: 1.05;
+    color: var(--ink);
+    text-shadow: 2px 2px 0 var(--accent-soft);
+    cursor: pointer;
+    user-select: none;
+  }
+
+  body.theme-boho .title-block h1 { text-shadow: none; }
+
+  .switcher-caret {
+    background: white;
+    border: 3px solid var(--ink);
+    color: var(--ink);
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    box-shadow: 0 3px 0 var(--ink);
+    transition: transform 0.12s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  body.theme-boho .switcher-caret {
+    border-width: 1px;
+    box-shadow: 0 1px 3px var(--shadow);
+  }
+
+  .switcher-caret:hover { transform: translateY(-1px); box-shadow: 0 4px 0 var(--ink); }
+  body.theme-boho .switcher-caret:hover { box-shadow: 0 3px 8px var(--shadow); }
+
+  .switcher-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background: var(--surface);
+    border: 3px solid var(--ink);
+    border-radius: 16px;
+    padding: 8px;
+    min-width: 280px;
+    box-shadow: 0 6px 0 var(--ink), 0 12px 24px rgba(0,0,0,0.15);
+    z-index: 50;
+    margin-top: 8px;
+    display: none;
+  }
+
+  body.theme-boho .switcher-menu {
+    border-width: 1px;
+    border-color: rgba(45, 42, 38, 0.15);
+    box-shadow: 0 12px 32px rgba(0,0,0,0.15);
+  }
+
+  .switcher-menu.open { display: block; }
+
+  .switcher-item {
+    padding: 10px 14px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--ink);
+  }
+
+  .switcher-item:hover { background: var(--accent-soft); }
+  .switcher-item.active { background: var(--accent-soft); }
+  .switcher-item .meta { font-size: 12px; color: var(--ink-soft); font-weight: 500; }
+
+  .switcher-divider {
+    height: 2px;
+    background: rgba(0,0,0,0.08);
+    margin: 6px 4px;
+  }
+
+  .switcher-action {
+    padding: 10px 14px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--accent);
+  }
+
+  .switcher-action:hover { background: var(--accent-soft); }
+
+  .title-block .subtitle {
+    color: var(--ink-soft);
+    font-size: 15px;
+    margin-top: 6px;
+    font-weight: 500;
+  }
+
+  .controls {
+    display: flex;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+
+  .btn {
+    background: var(--surface);
+    border: 3px solid var(--ink);
+    color: var(--ink);
+    padding: 10px 18px;
+    border-radius: 999px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+    font-family: inherit;
+    box-shadow: 0 3px 0 var(--ink);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  body.theme-boho .btn { border-width: 1px; box-shadow: 0 1px 3px var(--shadow); }
+  body.theme-boho .btn:hover { box-shadow: 0 4px 12px var(--shadow); }
+
+  .btn:hover { transform: translateY(-2px); box-shadow: 0 5px 0 var(--ink); }
+  .btn:active { transform: translateY(1px); box-shadow: 0 1px 0 var(--ink); }
+
+  body.theme-boho .btn:active { transform: translateY(0); box-shadow: 0 1px 3px var(--shadow); }
+
+  .btn-icon {
+    width: 46px;
+    height: 46px;
+    padding: 0;
+    justify-content: center;
+    font-size: 20px;
+  }
+
+  .btn-primary { background: var(--accent); color: white; }
+
+  main { max-width: 1280px; margin: 0 auto; }
+
+  .chart { display: flex; flex-direction: column; gap: 12px; }
+
+  .level {
+    background: var(--surface);
+    border: 4px solid var(--ink);
+    border-radius: 24px;
+    padding: 16px 24px 16px 28px;
+    box-shadow: 0 5px 0 var(--ink);
+    transition: transform 0.18s, box-shadow 0.18s, background 0.2s;
+    position: relative;
+    min-height: 112px;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    overflow: hidden;
+  }
+
+  body.theme-boho .level {
+    border: 1px solid rgba(45, 42, 38, 0.08);
+    box-shadow: 0 2px 10px var(--shadow);
+  }
+  body.theme-jungle .level,
+  body.theme-ocean .level {
+    border: 3px solid var(--ink);
+    box-shadow: 0 4px 0 var(--ink);
+  }
+
+  .level::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 18px;
+    background: var(--level-color, var(--accent));
+    border-right: 3px solid var(--ink);
+  }
+
+  body.theme-boho .level::before { width: 10px; border-right: none; }
+
+  .level.drag-over {
+    transform: translateY(-3px) scale(1.005);
+    box-shadow: 0 9px 0 var(--ink);
+    background: linear-gradient(0deg, color-mix(in srgb, var(--level-color) 12%, var(--surface)), var(--surface));
+  }
+
+  body.theme-boho .level.drag-over { box-shadow: 0 10px 32px var(--shadow-strong); }
+
+  .level-label {
+    flex: 0 0 220px;
+    margin-left: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .level-name {
+    font-family: 'Fredoka', sans-serif;
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .level:first-child .level-name::after { content: '⭐'; font-size: 22px; }
+  .level:last-child .level-name::before { content: '💭'; font-size: 22px; }
+  body.theme-boho .level:first-child .level-name::after,
+  body.theme-boho .level:last-child .level-name::before { display: none; }
+
+  .level-count { font-size: 14px; color: var(--ink-soft); font-weight: 500; }
+
+  .clip-zone {
+    flex: 1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    min-height: 80px;
+    padding: 4px 0;
+    position: relative;
+    z-index: 1;
+  }
+
+  .clip {
+    background: white;
+    border: 3px solid var(--ink);
+    border-radius: 14px;
+    padding: 20px 14px 12px;
+    min-width: 98px;
+    text-align: center;
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    touch-action: none;
+    position: relative;
+    box-shadow: 0 3px 0 var(--ink);
+    transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+  }
+
+  .clip-ghost {
+    position: fixed !important;
+    pointer-events: none !important;
+    z-index: 1200 !important;
+    transform: scale(1.08) rotate(-2deg);
+    box-shadow: 0 16px 40px rgba(0,0,0,0.3) !important;
+    opacity: 0.92;
+    margin: 0 !important;
+  }
+
+  body.theme-boho .clip {
+    border-width: 2px;
+    box-shadow: 0 3px 8px var(--shadow);
+    border-color: var(--clip-color, var(--accent));
+  }
+
+  .clip[draggable=true] { cursor: grab; }
+
+  .clip-tab {
+    position: absolute;
+    top: -9px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 36px;
+    height: 14px;
+    background: var(--clip-color, var(--accent));
+    border: 3px solid var(--ink);
+    border-bottom: none;
+    border-radius: 6px 6px 0 0;
+  }
+
+  body.theme-boho .clip-tab {
+    border-width: 2px;
+    border-color: var(--clip-color, var(--accent));
+    background: white;
+  }
+
+  .clip:hover { transform: translateY(-3px); box-shadow: 0 6px 0 var(--ink); }
+  body.theme-boho .clip:hover { box-shadow: 0 8px 20px var(--shadow-strong); }
+
+  .clip.dragging { opacity: 0.35; cursor: grabbing; }
+
+  .clip-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    margin: 0 auto 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 16px;
+    color: white;
+    border: 2.5px solid var(--ink);
+    font-family: 'Fredoka', sans-serif;
+  }
+
+  body.theme-boho .clip-avatar { border: none; }
+
+  .clip-name {
+    font-family: 'Fredoka', sans-serif;
+    font-weight: 600;
+    font-size: 15px;
+    color: var(--ink);
+    letter-spacing: -0.005em;
+  }
+
+  .empty-hint {
+    color: var(--ink-soft);
+    font-size: 14px;
+    font-style: italic;
+    opacity: 0.65;
+    padding-left: 6px;
+  }
+
+  /* Settings panel */
+  .panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 400px;
+    max-width: 100vw;
+    height: 100vh;
+    background: var(--surface);
+    border-left: 4px solid var(--ink);
+    box-shadow: -12px 0 32px rgba(0,0,0,0.18);
+    padding: 26px 26px;
+    overflow-y: auto;
+    transform: translateX(105%);
+    transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+    z-index: 100;
+  }
+
+  body.theme-boho .panel { border-left: 1px solid rgba(45, 42, 38, 0.1); }
+
+  .panel.open { transform: translateX(0); }
+
+  .panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 26px;
+  }
+
+  .panel h2 {
+    font-family: 'Fredoka', sans-serif;
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+  }
+
+  .panel .close {
+    background: white;
+    border: 3px solid var(--ink);
+    font-size: 22px;
+    cursor: pointer;
+    color: var(--ink);
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: inherit;
+    line-height: 1;
+    box-shadow: 0 2px 0 var(--ink);
+    font-weight: 700;
+  }
+
+  body.theme-boho .panel .close {
+    border-width: 1px;
+    box-shadow: none;
+    color: var(--ink-soft);
+  }
+
+  .panel .close:hover { transform: translateY(-1px); box-shadow: 0 3px 0 var(--ink); }
+
+  .panel-section { margin-bottom: 28px; }
+
+  .panel-section h3 {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--ink-soft);
+    margin-bottom: 12px;
+    font-weight: 700;
+  }
+
+  .panel input[type=text] {
+    width: 100%;
+    padding: 11px 14px;
+    border: 2.5px solid var(--ink);
+    border-radius: 10px;
+    font-size: 15px;
+    background: white;
+    color: var(--ink);
+    font-family: inherit;
+    font-weight: 500;
+  }
+
+  body.theme-boho .panel input[type=text] {
+    border-width: 1px;
+    border-color: rgba(45, 42, 38, 0.15);
+  }
+
+  .panel input[type=text]:focus { outline: none; border-color: var(--accent); }
+
+  .row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .row input { flex: 1; }
+
+  .icon-btn {
+    background: white;
+    border: 2px solid var(--ink);
+    color: var(--ink);
+    cursor: pointer;
+    padding: 0;
+    font-size: 16px;
+    border-radius: 8px;
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: inherit;
+    font-weight: 700;
+    box-shadow: 0 2px 0 var(--ink);
+  }
+
+  body.theme-boho .icon-btn { border: none; box-shadow: none; background: none; color: var(--ink-soft); }
+
+  .icon-btn:hover { transform: translateY(-1px); box-shadow: 0 3px 0 var(--ink); }
+  body.theme-boho .icon-btn:hover { background: rgba(0,0,0,0.05); color: var(--ink); transform: none; box-shadow: none; }
+
+  .icon-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  .add-btn {
+    width: 100%;
+    background: var(--accent-soft);
+    color: var(--ink);
+    border: 2.5px dashed var(--ink);
+    padding: 11px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-weight: 600;
+    font-family: inherit;
+    margin-top: 8px;
+    font-size: 14px;
+    transition: all 0.15s;
+  }
+
+  body.theme-boho .add-btn {
+    border-width: 1.5px;
+    border-color: rgba(45, 42, 38, 0.25);
+    background: transparent;
+  }
+
+  .add-btn:hover { transform: translateY(-1px); background: var(--accent); color: white; }
+  body.theme-boho .add-btn:hover {
+    transform: none;
+    color: var(--accent);
+    background: var(--accent-soft);
+    border-color: var(--accent);
+  }
+
+  .log {
+    background: white;
+    border: 2.5px solid var(--ink);
+    border-radius: 12px;
+    padding: 4px 14px;
+    max-height: 280px;
+    overflow-y: auto;
+  }
+
+  body.theme-boho .log {
+    border-width: 1px;
+    border-color: rgba(45, 42, 38, 0.06);
+  }
+
+  .log-empty {
+    padding: 16px 4px;
+    color: var(--ink-soft);
+    font-size: 13px;
+    font-style: italic;
+    text-align: center;
+  }
+
+  .log-entry {
+    font-size: 13px;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(44, 42, 74, 0.08);
+    color: var(--ink);
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .log-entry:last-child { border: none; }
+  .log-entry .name { font-weight: 700; }
+  .log-entry .meta { color: var(--ink-soft); font-size: 12px; white-space: nowrap; }
+  .log-entry .move-up { color: #4FAE51; font-weight: 600; }
+  .log-entry .move-down { color: #D9534F; font-weight: 600; }
+
+  .themes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  .theme-card {
+    padding: 14px;
+    border-radius: 14px;
+    border: 2.5px solid var(--ink);
+    cursor: pointer;
+    background: white;
+    text-align: left;
+    font-family: inherit;
+    transition: all 0.15s;
+    box-shadow: 0 3px 0 var(--ink);
+  }
+
+  body.theme-boho .theme-card {
+    border-width: 2px;
+    border-color: transparent;
+    box-shadow: none;
+  }
+
+  .theme-card:hover { transform: translateY(-2px); box-shadow: 0 5px 0 var(--ink); }
+  .theme-card.active { background: var(--accent-soft); }
+
+  body.theme-boho .theme-card.active {
+    border-color: var(--accent);
+    box-shadow: 0 4px 12px var(--shadow);
+    background: white;
+  }
+
+  .theme-name {
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    font-family: 'Fredoka', sans-serif;
+  }
+
+  .theme-swatches { display: flex; gap: 5px; }
+  .theme-swatch {
+    width: 20px;
+    height: 20px;
+    border-radius: 6px;
+    border: 1.5px solid var(--ink);
+  }
+
+  body.theme-boho .theme-swatch { border: none; }
+
+  /* Sparkle */
+  @keyframes sparkle-pop {
+    0% { transform: translate(-50%, -50%) scale(0) rotate(0deg); opacity: 1; }
+    50% { opacity: 1; }
+    100% { transform: translate(var(--tx, -50%), var(--ty, -50%)) scale(0.4) rotate(360deg); opacity: 0; }
+  }
+
+  .sparkle {
+    position: fixed;
+    pointer-events: none;
+    font-size: 32px;
+    z-index: 1500;
+    animation: sparkle-pop 1s ease-out forwards;
+  }
+
+  .help-foot {
+    max-width: 1280px;
+    margin: 26px auto 0;
+    text-align: center;
+    font-size: 13px;
+    color: var(--ink-soft);
+    opacity: 0.75;
+    font-weight: 500;
+  }
+
+  /* Sub mode */
+  .sub-banner {
+    max-width: 1280px;
+    margin: 0 auto 18px;
+    background: linear-gradient(135deg, #FFE082, #FFB347);
+    border: 4px solid var(--ink);
+    border-radius: 18px;
+    padding: 14px 20px;
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    box-shadow: 0 4px 0 var(--ink);
+    font-weight: 600;
+    color: var(--ink);
+    flex-wrap: wrap;
+  }
+  body.theme-boho .sub-banner {
+    border: 1px solid rgba(45, 42, 38, 0.15);
+    box-shadow: 0 4px 12px var(--shadow);
+  }
+  .sub-banner.visible { display: flex; }
+  .sub-banner-content { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 240px; }
+  .sub-banner-icon { font-size: 26px; }
+  .sub-banner-text { font-size: 15px; line-height: 1.35; }
+  .sub-banner-buttons { display: flex; gap: 8px; flex-shrink: 0; }
+  .sub-banner-buttons .btn { font-size: 13px; padding: 9px 14px; }
+
+  body.sub-mode .controls .btn:not(#subModeQuit):not(#subAddNoteBtn) { display: none; }
+  body.sub-mode .switcher-caret { display: none; }
+  body.sub-mode .title-block h1 { cursor: default; }
+  body.sub-mode .panel { transform: translateX(105%) !important; }
+
+  .sub-note-list {
+    background: white;
+    border: 2.5px solid var(--ink);
+    border-radius: 12px;
+    padding: 10px 14px;
+    max-height: 240px;
+    overflow-y: auto;
+  }
+  body.theme-boho .sub-note-list { border-width: 1px; border-color: rgba(45, 42, 38, 0.1); }
+  .sub-note-item {
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(0,0,0,0.08);
+  }
+  .sub-note-item:last-child { border: none; }
+  .sub-note-meta { font-size: 12px; color: var(--ink-soft); margin-bottom: 4px; }
+  .sub-note-body { font-size: 14px; color: var(--ink); }
+
+  textarea.field {
+    width: 100%;
+    padding: 11px 14px;
+    border: 2.5px solid var(--ink);
+    border-radius: 10px;
+    font-size: 14px;
+    background: white;
+    color: var(--ink);
+    font-family: inherit;
+    font-weight: 400;
+    resize: vertical;
+    line-height: 1.45;
+  }
+  body.theme-boho textarea.field {
+    border-width: 1px;
+    border-color: rgba(45, 42, 38, 0.15);
+  }
+  textarea.field:focus { outline: none; border-color: var(--accent); }
+
+  /* Modals */
+  .modal-back {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+    padding: 20px;
+  }
+  .modal-back.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    border-radius: 20px;
+    border: 4px solid var(--ink);
+    padding: 28px;
+    max-width: 480px;
+    width: 100%;
+    box-shadow: 0 8px 0 var(--ink), 0 24px 60px rgba(0,0,0,0.25);
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  body.theme-boho .modal {
+    border-width: 0;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.25);
+  }
+  .modal h3 {
+    font-family: 'Fredoka', sans-serif;
+    font-size: 22px;
+    margin-bottom: 8px;
+    font-weight: 700;
+  }
+  .modal p {
+    color: var(--ink-soft);
+    margin-bottom: 18px;
+    font-size: 14px;
+  }
+  .modal-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 18px;
+  }
+
+  .form-group { margin-bottom: 16px; }
+  .form-group label {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-soft);
+    margin-bottom: 8px;
+  }
+  .form-group select,
+  .form-group input[type=text] {
+    width: 100%;
+    padding: 11px 14px;
+    border: 2.5px solid var(--ink);
+    border-radius: 10px;
+    font-size: 15px;
+    background: white;
+    color: var(--ink);
+    font-family: inherit;
+    font-weight: 500;
+  }
+  body.theme-boho .form-group select,
+  body.theme-boho .form-group input[type=text] {
+    border-width: 1px;
+    border-color: rgba(45, 42, 38, 0.15);
+  }
+
+  .report-type-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .report-type-card {
+    padding: 14px 16px;
+    border: 2.5px solid var(--ink);
+    border-radius: 14px;
+    background: white;
+    text-align: left;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s;
+    box-shadow: 0 3px 0 var(--ink);
+  }
+  body.theme-boho .report-type-card {
+    border-width: 1.5px;
+    border-color: rgba(45, 42, 38, 0.15);
+    box-shadow: none;
+  }
+  .report-type-card:hover { transform: translateY(-2px); box-shadow: 0 5px 0 var(--ink); }
+  body.theme-boho .report-type-card:hover { transform: none; background: var(--accent-soft); }
+  .report-type-card.active { background: var(--accent-soft); }
+  body.theme-boho .report-type-card.active { border-color: var(--accent); }
+  .report-type-name { font-weight: 700; font-size: 15px; margin-bottom: 2px; font-family: 'Fredoka', sans-serif; }
+  .report-type-desc { font-size: 13px; color: var(--ink-soft); }
+
+  .data-tools-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .data-tools-row .btn {
+    flex: 1;
+    font-size: 13px;
+    padding: 9px 12px;
+  }
+</style>
+</head>
+<body class="theme-classic">
+
+<div class="bunting"></div>
+
+<div class="sub-banner" id="subBanner">
+  <div class="sub-banner-content">
+    <span class="sub-banner-icon">🧑‍🏫</span>
+    <span class="sub-banner-text"><strong>Substitute Mode is on.</strong> Welcome! Drag clips up or down for the day. Class settings are locked.</span>
+  </div>
+  <div class="sub-banner-buttons">
+    <button class="btn" id="subAddNoteBtn">+ Note for Teacher</button>
+    <button class="btn btn-primary" id="subModeQuit">Exit Sub Mode</button>
+  </div>
+</div>
+
+<header>
+  <div class="title-block">
+    <div class="class-switcher">
+      <h1 id="className" title="Click to switch class">Mrs. Anderson's Class</h1>
+      <button class="switcher-caret" id="switcherCaret" aria-label="Switch class">▼</button>
+    </div>
+    <div class="subtitle" id="dateLine"></div>
+    <div class="switcher-menu" id="switcherMenu" role="menu"></div>
+  </div>
+  <div class="controls">
+    <button class="btn" id="reportsBtn"><span>📊</span> Reports</button>
+    <button class="btn" id="resetBtn">Reset Day</button>
+    <button class="btn btn-icon" id="settingsBtn" aria-label="Settings" title="Settings">⚙</button>
+  </div>
+</header>
+
+<main>
+  <div class="chart" id="chart"></div>
+  <div class="help-foot">Drag clips up or down · Click ⚙ to customize · Data saves automatically</div>
+</main>
+
+<aside class="panel" id="panel" aria-hidden="true">
+  <div class="panel-header">
+    <h2>Settings</h2>
+    <button class="close" id="closeBtn" aria-label="Close settings">×</button>
+  </div>
+
+  <div class="panel-section">
+    <h3>Class Name</h3>
+    <input type="text" id="classNameInput" placeholder="Mrs. Anderson's Class">
+  </div>
+
+  <div class="panel-section">
+    <h3>Theme</h3>
+    <div class="themes" id="themesGrid">
+      <button class="theme-card" data-theme="classic">
+        <div class="theme-name">Classic Kitchy</div>
+        <div class="theme-swatches">
+          <div class="theme-swatch" style="background:#FF6B9D"></div>
+          <div class="theme-swatch" style="background:#FFD93D"></div>
+          <div class="theme-swatch" style="background:#6BC076"></div>
+          <div class="theme-swatch" style="background:#5DA8E0"></div>
+        </div>
+      </button>
+      <button class="theme-card" data-theme="ocean">
+        <div class="theme-name">Ocean</div>
+        <div class="theme-swatches">
+          <div class="theme-swatch" style="background:#2E86AB"></div>
+          <div class="theme-swatch" style="background:#87CEEB"></div>
+          <div class="theme-swatch" style="background:#F4D35E"></div>
+          <div class="theme-swatch" style="background:#F4845F"></div>
+        </div>
+      </button>
+      <button class="theme-card" data-theme="jungle">
+        <div class="theme-name">Jungle</div>
+        <div class="theme-swatches">
+          <div class="theme-swatch" style="background:#5A8A3E"></div>
+          <div class="theme-swatch" style="background:#88C58A"></div>
+          <div class="theme-swatch" style="background:#FFD93D"></div>
+          <div class="theme-swatch" style="background:#C68A4E"></div>
+        </div>
+      </button>
+      <button class="theme-card" data-theme="boho">
+        <div class="theme-name">Boho Modern</div>
+        <div class="theme-swatches">
+          <div class="theme-swatch" style="background:#C97B5D"></div>
+          <div class="theme-swatch" style="background:#8FA68E"></div>
+          <div class="theme-swatch" style="background:#D4A574"></div>
+          <div class="theme-swatch" style="background:#F4E9D8"></div>
+        </div>
+      </button>
+    </div>
+  </div>
+
+  <div class="panel-section">
+    <h3>Levels (top to bottom)</h3>
+    <div id="levelsList"></div>
+    <button class="add-btn" id="addLevelBtn">+ Add level</button>
+  </div>
+
+  <div class="panel-section">
+    <h3>Students</h3>
+    <div id="studentsList"></div>
+    <button class="add-btn" id="addStudentBtn">+ Add student</button>
+  </div>
+
+  <div class="panel-section">
+    <h3>Today's Activity</h3>
+    <div class="log" id="activityLog"></div>
+  </div>
+
+  <div class="panel-section">
+    <h3>Substitute Mode</h3>
+    <button class="btn" id="subModeStart" style="width:100%; justify-content:center;">🧑‍🏫 Hand Off to a Substitute</button>
+    <div style="font-size: 12px; color: var(--ink-soft); margin-top: 8px;">
+      Locks settings and reports. The sub can still drag clips and leave you a note. Turn it off when you're back.
+    </div>
+  </div>
+
+  <div class="panel-section" id="subNotesSection" style="display:none">
+    <h3>Notes from Substitutes</h3>
+    <div class="sub-note-list" id="subNotesList"></div>
+    <button class="add-btn" id="clearSubNotesBtn" style="margin-top:10px">Clear all notes</button>
+  </div>
+
+  <div class="panel-section">
+    <h3>Backup &amp; Restore</h3>
+    <div class="data-tools-row">
+      <button class="btn" id="exportBtn">⬇ Backup</button>
+      <button class="btn" id="importBtn">⬆ Restore</button>
+    </div>
+    <input type="file" id="restoreInput" accept="application/json" style="display:none">
+    <div style="font-size: 12px; color: var(--ink-soft); margin-top: 6px;">
+      Backup saves all your classes and history to a file. Use it to move data to another device.
+    </div>
+  </div>
+</aside>
+
+<!-- Reset modal -->
+<div class="modal-back" id="resetModal">
+  <div class="modal">
+    <h3>Reset everyone to the middle?</h3>
+    <p>This sends all clips back to the middle level for tomorrow. Today's activity will be cleared too.</p>
+    <div class="modal-buttons">
+      <button class="btn" id="resetCancel">Cancel</button>
+      <button class="btn btn-primary" id="resetConfirm">Yes, Reset</button>
+    </div>
+  </div>
+</div>
+
+<!-- Reports modal -->
+<div class="modal-back" id="reportsModal">
+  <div class="modal">
+    <h3>Generate Report</h3>
+    <p>Create a PDF for conferences, your records, or to share with parents.</p>
+
+    <div class="form-group">
+      <label>Report Type</label>
+      <div class="report-type-grid" id="reportTypeGrid">
+        <button class="report-type-card active" data-type="snapshot">
+          <div class="report-type-name">Today's Snapshot</div>
+          <div class="report-type-desc">Where every student is right now</div>
+        </button>
+        <button class="report-type-card" data-type="student">
+          <div class="report-type-name">Student Report</div>
+          <div class="report-type-desc">One student's activity over a date range</div>
+        </button>
+        <button class="report-type-card" data-type="class-summary">
+          <div class="report-type-name">Class Summary</div>
+          <div class="report-type-desc">Whole-class activity over a date range</div>
+        </button>
+        <button class="report-type-card" data-type="daily-parent">
+          <div class="report-type-name">📬 Daily Parent Report</div>
+          <div class="report-type-desc">A warm, narrative note about today — print or email home</div>
+        </button>
+      </div>
+    </div>
+
+    <div class="form-group" id="studentSelectGroup" style="display:none">
+      <label>Student</label>
+      <select id="studentSelect"></select>
+    </div>
+
+    <div class="form-group" id="rangeSelectGroup" style="display:none">
+      <label>Date Range</label>
+      <select id="rangeSelect">
+        <option value="7">Last 7 days</option>
+        <option value="14">Last 14 days</option>
+        <option value="30" selected>Last 30 days</option>
+        <option value="90">Last 90 days</option>
+        <option value="365">Last year</option>
+      </select>
+    </div>
+
+    <div class="form-group" id="dailyNoteGroup" style="display:none">
+      <label>Your personal note (optional)</label>
+      <textarea class="field" id="dailyNoteText" rows="3" placeholder="A sentence or two from you — anything you want to add will appear in the parent's note in your voice."></textarea>
+    </div>
+
+    <div class="modal-buttons">
+      <button class="btn" id="reportsCancel">Cancel</button>
+      <button class="btn btn-primary" id="reportsGenerate">Generate PDF</button>
+    </div>
+  </div>
+</div>
+
+<!-- New class modal -->
+<div class="modal-back" id="newClassModal">
+  <div class="modal">
+    <h3>New Class</h3>
+    <p>Each class has its own students, levels, and activity log.</p>
+    <div class="form-group">
+      <label>Class Name</label>
+      <input type="text" id="newClassName" placeholder="e.g., Period 3 Math">
+    </div>
+    <div class="modal-buttons">
+      <button class="btn" id="newClassCancel">Cancel</button>
+      <button class="btn btn-primary" id="newClassCreate">Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- Sub leaves a note -->
+<div class="modal-back" id="subNoteModal">
+  <div class="modal">
+    <h3>Note for the teacher</h3>
+    <p>Anything you want them to know about today — how the class did, who needed extra support, anything important.</p>
+    <div class="form-group">
+      <textarea class="field" id="subNoteText" rows="5" placeholder="Today went well overall. A few notes..."></textarea>
+    </div>
+    <div class="modal-buttons">
+      <button class="btn" id="subNoteCancel">Cancel</button>
+      <button class="btn btn-primary" id="subNoteSave">Save Note</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete class confirm -->
+<div class="modal-back" id="deleteClassModal">
+  <div class="modal">
+    <h3>Delete this class?</h3>
+    <p id="deleteClassText">All students, levels, and activity history for this class will be removed. This can't be undone.</p>
+    <div class="modal-buttons">
+      <button class="btn" id="deleteClassCancel">Cancel</button>
+      <button class="btn btn-primary" id="deleteClassConfirm">Yes, Delete</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const AVATAR_COLORS = ['#FF6B9D','#5DA8E0','#FFB347','#6BC076','#B985E9','#FF7F6E','#2E86AB','#FFD93D','#9B5DE5','#F15BB5'];
+
+function defaultLevels() {
+  return [
+    { id: 'l1', name: 'Outstanding' },
+    { id: 'l2', name: 'Great Choices' },
+    { id: 'l3', name: 'Ready to Learn' },
+    { id: 'l4', name: 'Slow Down' },
+    { id: 'l5', name: 'Think About It' },
+  ];
+}
+
+function defaultStudents() {
+  const names = ['Mia','Jordan','Aiden','Sofia','Ethan','Luna','Mateo','Zara','Theo','Ivy','Kai','Nora','Felix','Hazel','Owen'];
+  return names.map((n, i) => ({ id: 's' + (i + 1), name: n, level: 'l3' }));
+}
+
+function makeClass(name) {
+  return {
+    id: 'c' + Date.now() + Math.floor(Math.random() * 1000),
+    name: name || "New Class",
+    theme: "classic",
+    levels: defaultLevels(),
+    students: defaultStudents(),
+    log: []
+  };
+}
+
+const DEFAULT_STATE = {
+  version: 2,
+  currentClassId: 'c1',
+  subMode: false,
+  subNotes: [],
+  classes: [{
+    id: 'c1',
+    name: "Mrs. Anderson's Class",
+    theme: "classic",
+    levels: defaultLevels(),
+    students: defaultStudents(),
+    log: []
+  }]
+};
+
+function migrate(saved) {
+  if (saved && saved.version === 2 && Array.isArray(saved.classes)) {
+    if (typeof saved.subMode !== 'boolean') saved.subMode = false;
+    if (!Array.isArray(saved.subNotes)) saved.subNotes = [];
+    return saved;
+  }
+  if (saved && saved.className && Array.isArray(saved.levels)) {
+    return {
+      version: 2,
+      currentClassId: 'c1',
+      subMode: false,
+      subNotes: [],
+      classes: [{
+        id: 'c1',
+        name: saved.className,
+        theme: saved.theme || 'classic',
+        levels: saved.levels,
+        students: saved.students || [],
+        log: saved.log || []
+      }]
+    };
+  }
+  return JSON.parse(JSON.stringify(DEFAULT_STATE));
+}
+
+let state = loadState();
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem('classmazing-state-v2') ||
+                localStorage.getItem('classmazing-state');
+    if (raw) return migrate(JSON.parse(raw));
+  } catch (e) {}
+  return JSON.parse(JSON.stringify(DEFAULT_STATE));
+}
+
+function saveState() {
+  localStorage.setItem('classmazing-state-v2', JSON.stringify(state));
+}
+
+function currentClass() {
+  let c = state.classes.find(c => c.id === state.currentClassId);
+  if (!c) {
+    c = state.classes[0];
+    if (c) state.currentClassId = c.id;
+  }
+  return c;
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function avatarColor(id) {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
+  return AVATAR_COLORS[hash % AVATAR_COLORS.length];
+}
+
+function levelColorVar(idx) { return `var(--level-${idx + 1})`; }
+function levelIndex(cls, id) { return cls.levels.findIndex(l => l.id === id); }
+function nowTime() { return new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); }
+
+function todayString() {
+  const opts = { weekday: 'long', month: 'long', day: 'numeric' };
+  return new Date().toLocaleDateString(undefined, opts);
+}
+
+function render() {
+  const cls = currentClass();
+  document.body.className = `theme-${cls.theme}` + (state.subMode ? ' sub-mode' : '');
+  document.getElementById('className').textContent = cls.name;
+  document.getElementById('dateLine').textContent = todayString();
+  document.getElementById('subBanner').classList.toggle('visible', !!state.subMode);
+  renderChart();
+  renderPanel();
+  renderSwitcher();
+  renderSubNotes();
+}
+
+function renderSubNotes() {
+  const section = document.getElementById('subNotesSection');
+  const list = document.getElementById('subNotesList');
+  if (!state.subNotes || state.subNotes.length === 0 || state.subMode) {
+    section.style.display = 'none';
+    return;
+  }
+  section.style.display = 'block';
+  list.innerHTML = state.subNotes
+    .slice()
+    .sort((a, b) => b.ts - a.ts)
+    .map(n => {
+      const d = new Date(n.ts);
+      const dateStr = d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+      const timeStr = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+      return `
+        <div class="sub-note-item">
+          <div class="sub-note-meta">${escapeHtml(dateStr)} · ${escapeHtml(timeStr)}${n.className ? ' · ' + escapeHtml(n.className) : ''}</div>
+          <div class="sub-note-body">${escapeHtml(n.text)}</div>
+        </div>
+      `;
+    }).join('');
+}
+
+function renderChart() {
+  const cls = currentClass();
+  const chart = document.getElementById('chart');
+  chart.innerHTML = '';
+  cls.levels.forEach((level, idx) => {
+    const studentsHere = cls.students.filter(s => s.level === level.id);
+    const color = levelColorVar(idx);
+    const levelEl = document.createElement('div');
+    levelEl.className = 'level';
+    levelEl.dataset.levelId = level.id;
+    levelEl.style.setProperty('--level-color', color);
+    levelEl.innerHTML = `
+      <div class="level-label">
+        <div class="level-name">${escapeHtml(level.name)}</div>
+        <div class="level-count">${studentsHere.length} student${studentsHere.length === 1 ? '' : 's'}</div>
+      </div>
+      <div class="clip-zone"></div>
+    `;
+    const zone = levelEl.querySelector('.clip-zone');
+    studentsHere.forEach(student => zone.appendChild(makeClip(student, color)));
+    if (studentsHere.length === 0) {
+      const hint = document.createElement('div');
+      hint.className = 'empty-hint';
+      hint.textContent = 'Drop a clip here';
+      zone.appendChild(hint);
+    }
+    chart.appendChild(levelEl);
+  });
+}
+
+function makeClip(student, color) {
+  const clip = document.createElement('div');
+  clip.className = 'clip';
+  clip.dataset.studentId = student.id;
+  clip.style.setProperty('--clip-color', color);
+  const initials = student.name.trim().charAt(0).toUpperCase();
+  const aColor = avatarColor(student.id);
+  clip.innerHTML = `
+    <div class="clip-tab"></div>
+    <div class="clip-avatar" style="background:${aColor}">${initials}</div>
+    <div class="clip-name">${escapeHtml(student.name)}</div>
+  `;
+  clip.addEventListener('pointerdown', (e) => {
+    if (e.button !== undefined && e.button !== 0) return;
+    startPointerDrag(clip, student.id, e.clientX, e.clientY);
+    e.preventDefault();
+  });
+  return clip;
+}
+
+/* ----- Drag system: pointer events (works on touch, mouse, and pen) ----- */
+let activeDrag = null;
+
+function startPointerDrag(clip, studentId, x, y) {
+  if (activeDrag) endPointerDrag(null, null);
+  const rect = clip.getBoundingClientRect();
+  const ghost = clip.cloneNode(true);
+  ghost.classList.add('clip-ghost');
+  ghost.style.width = rect.width + 'px';
+  ghost.style.left = (x - rect.width / 2) + 'px';
+  ghost.style.top = (y - rect.height / 2) + 'px';
+  document.body.appendChild(ghost);
+  clip.classList.add('dragging');
+  activeDrag = { clip, studentId, ghost, width: rect.width, height: rect.height };
+}
+
+function updatePointerDrag(x, y) {
+  if (!activeDrag) return;
+  activeDrag.ghost.style.left = (x - activeDrag.width / 2) + 'px';
+  activeDrag.ghost.style.top = (y - activeDrag.height / 2) + 'px';
+  document.querySelectorAll('.level.drag-over').forEach(l => l.classList.remove('drag-over'));
+  const target = findLevelAt(x, y);
+  if (target) target.classList.add('drag-over');
+}
+
+function endPointerDrag(x, y) {
+  if (!activeDrag) return;
+  document.querySelectorAll('.level.drag-over').forEach(l => l.classList.remove('drag-over'));
+  const target = (x != null && y != null) ? findLevelAt(x, y) : null;
+  if (activeDrag.ghost) activeDrag.ghost.remove();
+  if (activeDrag.clip) activeDrag.clip.classList.remove('dragging');
+  const studentId = activeDrag.studentId;
+  activeDrag = null;
+  if (target && target.dataset.levelId) {
+    const cls = currentClass();
+    const student = cls.students.find(s => s.id === studentId);
+    if (student && student.level !== target.dataset.levelId) {
+      moveStudent(studentId, target.dataset.levelId, x, y);
+    }
+  }
+}
+
+function findLevelAt(x, y) {
+  const el = document.elementFromPoint(x, y);
+  if (!el) return null;
+  return el.closest('.level');
+}
+
+document.addEventListener('pointermove', (e) => {
+  if (activeDrag) { updatePointerDrag(e.clientX, e.clientY); e.preventDefault(); }
+}, { passive: false });
+
+document.addEventListener('pointerup', (e) => {
+  if (activeDrag) endPointerDrag(e.clientX, e.clientY);
+});
+
+document.addEventListener('pointercancel', () => {
+  if (activeDrag) endPointerDrag(null, null);
+});
+
+function moveStudent(studentId, newLevelId, x, y) {
+  const cls = currentClass();
+  const student = cls.students.find(s => s.id === studentId);
+  if (!student) return;
+  const fromIdx = levelIndex(cls, student.level);
+  const toIdx = levelIndex(cls, newLevelId);
+  const fromName = cls.levels[fromIdx].name;
+  const toName = cls.levels[toIdx].name;
+  student.level = newLevelId;
+  cls.log.unshift({
+    studentId: student.id,
+    studentName: student.name,
+    from: fromName,
+    to: toName,
+    direction: toIdx < fromIdx ? 'up' : 'down',
+    time: nowTime(),
+    ts: Date.now()
+  });
+  if (cls.log.length > 2000) cls.log.length = 2000;
+  saveState();
+  render();
+  if (toIdx === 0 && fromIdx > 0) celebrate(x, y);
+}
+
+function celebrate(x, y) {
+  const emojis = ['✨','⭐','🌟','🎉','💫'];
+  for (let i = 0; i < 12; i++) {
+    const s = document.createElement('div');
+    s.className = 'sparkle';
+    s.textContent = emojis[i % emojis.length];
+    s.style.left = x + 'px';
+    s.style.top = y + 'px';
+    const angle = (Math.PI * 2 * i) / 12 + (Math.random() - 0.5) * 0.4;
+    const dist = 100 + Math.random() * 80;
+    s.style.setProperty('--tx', Math.cos(angle) * dist + 'px');
+    s.style.setProperty('--ty', Math.sin(angle) * dist + 'px');
+    document.body.appendChild(s);
+    setTimeout(() => s.remove(), 1000);
+  }
+}
+
+/* ----- Class switcher ----- */
+function renderSwitcher() {
+  const menu = document.getElementById('switcherMenu');
+  let html = '';
+  state.classes.forEach(c => {
+    const isActive = c.id === state.currentClassId;
+    html += `
+      <div class="switcher-item ${isActive ? 'active' : ''}" data-class-id="${c.id}">
+        <span>${escapeHtml(c.name)}</span>
+        <span class="meta">${c.students.length} student${c.students.length === 1 ? '' : 's'}</span>
+      </div>
+    `;
+  });
+  html += `<div class="switcher-divider"></div>`;
+  html += `<div class="switcher-action" data-action="new-class">+ New Class</div>`;
+  if (state.classes.length > 1) {
+    html += `<div class="switcher-action" data-action="delete-class" style="color:#D9534F">🗑 Delete Current Class</div>`;
+  }
+  menu.innerHTML = html;
+}
+
+document.getElementById('switcherCaret').addEventListener('click', (e) => {
+  e.stopPropagation();
+  document.getElementById('switcherMenu').classList.toggle('open');
+});
+
+document.getElementById('className').addEventListener('click', (e) => {
+  e.stopPropagation();
+  document.getElementById('switcherMenu').classList.toggle('open');
+});
+
+document.getElementById('switcherMenu').addEventListener('click', (e) => {
+  const item = e.target.closest('.switcher-item');
+  const action = e.target.closest('[data-action]');
+  if (item) {
+    state.currentClassId = item.dataset.classId;
+    saveState();
+    document.getElementById('switcherMenu').classList.remove('open');
+    render();
+  } else if (action) {
+    document.getElementById('switcherMenu').classList.remove('open');
+    if (action.dataset.action === 'new-class') {
+      document.getElementById('newClassName').value = '';
+      document.getElementById('newClassModal').classList.add('open');
+      setTimeout(() => document.getElementById('newClassName').focus(), 50);
+    } else if (action.dataset.action === 'delete-class') {
+      document.getElementById('deleteClassText').textContent =
+        `All students, levels, and activity history for "${currentClass().name}" will be removed. This can't be undone.`;
+      document.getElementById('deleteClassModal').classList.add('open');
+    }
+  }
+});
+
+document.addEventListener('click', () => {
+  document.getElementById('switcherMenu').classList.remove('open');
+});
+
+document.getElementById('newClassCancel').addEventListener('click', () => {
+  document.getElementById('newClassModal').classList.remove('open');
+});
+document.getElementById('newClassCreate').addEventListener('click', () => {
+  const name = document.getElementById('newClassName').value.trim() || 'New Class';
+  const cls = makeClass(name);
+  state.classes.push(cls);
+  state.currentClassId = cls.id;
+  saveState();
+  document.getElementById('newClassModal').classList.remove('open');
+  render();
+});
+document.getElementById('newClassName').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') document.getElementById('newClassCreate').click();
+});
+
+document.getElementById('deleteClassCancel').addEventListener('click', () => {
+  document.getElementById('deleteClassModal').classList.remove('open');
+});
+document.getElementById('deleteClassConfirm').addEventListener('click', () => {
+  if (state.classes.length <= 1) return;
+  state.classes = state.classes.filter(c => c.id !== state.currentClassId);
+  state.currentClassId = state.classes[0].id;
+  saveState();
+  document.getElementById('deleteClassModal').classList.remove('open');
+  render();
+});
+
+/* ----- Settings panel ----- */
+function renderPanel() {
+  const cls = currentClass();
+  document.getElementById('classNameInput').value = cls.name;
+
+  document.querySelectorAll('.theme-card').forEach(c => {
+    c.classList.toggle('active', c.dataset.theme === cls.theme);
+  });
+
+  const levelsList = document.getElementById('levelsList');
+  levelsList.innerHTML = '';
+  cls.levels.forEach((level) => {
+    const row = document.createElement('div');
+    row.className = 'row';
+    const dis = cls.levels.length <= 2 ? 'disabled' : '';
+    row.innerHTML = `
+      <input type="text" data-level-id="${level.id}" value="${escapeHtml(level.name)}" placeholder="Level name">
+      <button class="icon-btn" data-action="remove-level" data-level-id="${level.id}" title="Remove" ${dis}>×</button>
+    `;
+    levelsList.appendChild(row);
+  });
+
+  const studentsList = document.getElementById('studentsList');
+  studentsList.innerHTML = '';
+  cls.students.forEach((s) => {
+    const row = document.createElement('div');
+    row.className = 'row';
+    row.innerHTML = `
+      <input type="text" data-student-id="${s.id}" value="${escapeHtml(s.name)}" placeholder="Student name">
+      <button class="icon-btn" data-action="remove-student" data-student-id="${s.id}" title="Remove">×</button>
+    `;
+    studentsList.appendChild(row);
+  });
+
+  const log = document.getElementById('activityLog');
+  if (cls.log.length === 0) {
+    log.innerHTML = '<div class="log-empty">No clip movements yet today.</div>';
+  } else {
+    const todayStart = new Date(); todayStart.setHours(0,0,0,0);
+    const todayLog = cls.log.filter(e => e.ts >= todayStart.getTime());
+    const entries = todayLog.length > 0 ? todayLog : cls.log.slice(0, 30);
+    log.innerHTML = entries.map(entry => `
+      <div class="log-entry">
+        <div>
+          <span class="name">${escapeHtml(entry.studentName)}</span>
+          <span class="move-${entry.direction}">${entry.direction === 'up' ? '↑' : '↓'} ${escapeHtml(entry.to)}</span>
+        </div>
+        <span class="meta">${escapeHtml(entry.time)}</span>
+      </div>
+    `).join('');
+  }
+}
+
+document.getElementById('settingsBtn').addEventListener('click', () => {
+  document.getElementById('panel').classList.add('open');
+});
+document.getElementById('closeBtn').addEventListener('click', () => {
+  document.getElementById('panel').classList.remove('open');
+});
+
+document.getElementById('classNameInput').addEventListener('input', (e) => {
+  currentClass().name = e.target.value || "My Class";
+  saveState();
+  document.getElementById('className').textContent = currentClass().name;
+  renderSwitcher();
+});
+
+document.getElementById('themesGrid').addEventListener('click', (e) => {
+  const card = e.target.closest('.theme-card');
+  if (!card) return;
+  currentClass().theme = card.dataset.theme;
+  saveState();
+  render();
+});
+
+document.getElementById('levelsList').addEventListener('input', (e) => {
+  if (e.target.matches('input[data-level-id]')) {
+    const cls = currentClass();
+    const level = cls.levels.find(l => l.id === e.target.dataset.levelId);
+    if (level) { level.name = e.target.value; saveState(); renderChart(); }
+  }
+});
+
+document.getElementById('levelsList').addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-action="remove-level"]');
+  if (!btn || btn.disabled) return;
+  const cls = currentClass();
+  const levelId = btn.dataset.levelId;
+  if (cls.levels.length <= 2) return;
+  const fallback = cls.levels.find(l => l.id !== levelId).id;
+  cls.students.forEach(s => { if (s.level === levelId) s.level = fallback; });
+  cls.levels = cls.levels.filter(l => l.id !== levelId);
+  saveState();
+  render();
+});
+
+document.getElementById('addLevelBtn').addEventListener('click', () => {
+  currentClass().levels.push({ id: 'l' + Date.now(), name: 'New Level' });
+  saveState();
+  render();
+});
+
+document.getElementById('studentsList').addEventListener('input', (e) => {
+  if (e.target.matches('input[data-student-id]')) {
+    const cls = currentClass();
+    const s = cls.students.find(x => x.id === e.target.dataset.studentId);
+    if (s) { s.name = e.target.value; saveState(); renderChart(); }
+  }
+});
+
+document.getElementById('studentsList').addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-action="remove-student"]');
+  if (!btn) return;
+  const cls = currentClass();
+  cls.students = cls.students.filter(s => s.id !== btn.dataset.studentId);
+  saveState();
+  render();
+});
+
+document.getElementById('addStudentBtn').addEventListener('click', () => {
+  const cls = currentClass();
+  const middleLevel = cls.levels[Math.floor(cls.levels.length / 2)].id;
+  cls.students.push({
+    id: 's' + Date.now(),
+    name: 'New Student',
+    level: middleLevel
+  });
+  saveState();
+  render();
+});
+
+/* ----- Reset ----- */
+document.getElementById('resetBtn').addEventListener('click', () => {
+  document.getElementById('resetModal').classList.add('open');
+});
+document.getElementById('resetCancel').addEventListener('click', () => {
+  document.getElementById('resetModal').classList.remove('open');
+});
+document.getElementById('resetConfirm').addEventListener('click', () => {
+  const cls = currentClass();
+  const middleLevel = cls.levels[Math.floor(cls.levels.length / 2)].id;
+  cls.students.forEach(s => s.level = middleLevel);
+  cls.log = [];
+  saveState();
+  render();
+  document.getElementById('resetModal').classList.remove('open');
+});
+
+/* ----- Reports ----- */
+let reportType = 'snapshot';
+
+document.getElementById('reportsBtn').addEventListener('click', () => {
+  populateStudentSelect();
+  document.getElementById('reportsModal').classList.add('open');
+});
+document.getElementById('reportsCancel').addEventListener('click', () => {
+  document.getElementById('reportsModal').classList.remove('open');
+});
+
+document.getElementById('reportTypeGrid').addEventListener('click', (e) => {
+  const card = e.target.closest('.report-type-card');
+  if (!card) return;
+  document.querySelectorAll('.report-type-card').forEach(c => c.classList.remove('active'));
+  card.classList.add('active');
+  reportType = card.dataset.type;
+  const needsStudent = reportType === 'student' || reportType === 'daily-parent';
+  const needsRange = reportType === 'student' || reportType === 'class-summary';
+  const needsNote = reportType === 'daily-parent';
+  document.getElementById('studentSelectGroup').style.display = needsStudent ? 'block' : 'none';
+  document.getElementById('rangeSelectGroup').style.display = needsRange ? 'block' : 'none';
+  document.getElementById('dailyNoteGroup').style.display = needsNote ? 'block' : 'none';
+});
+
+function populateStudentSelect() {
+  const sel = document.getElementById('studentSelect');
+  sel.innerHTML = currentClass().students
+    .map(s => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('');
+}
+
+document.getElementById('reportsGenerate').addEventListener('click', () => {
+  if (reportType === 'snapshot') generateSnapshotPDF();
+  else if (reportType === 'student') generateStudentPDF();
+  else if (reportType === 'class-summary') generateClassSummaryPDF();
+  else if (reportType === 'daily-parent') generateDailyParentPDF();
+  document.getElementById('reportsModal').classList.remove('open');
+});
+
+function buildDayNarrative(student, todayEntries, net) {
+  const name = student.name;
+  if (todayEntries.length === 0) {
+    return `${name} had a steady, focused day today. They came in ready to learn, kept up with our class routines, and stayed right with the group all day. Days like this are sometimes the most important ones — quiet, consistent work is what learning is built on.`;
+  }
+  if (net >= 2) {
+    return `What a wonderful day for ${name}! They consistently showed up ready to learn and made the kind of choices that brighten our whole classroom. We're so proud of the day they had.`;
+  }
+  if (net === 1) {
+    return `${name} had a really good day today. They stayed focused, made positive choices, and contributed in their own way to a great day for our class.`;
+  }
+  if (net === 0) {
+    return `${name} had a day with some ups and downs — that's just part of being a kid learning to make great choices. They bounced back well and we ended the day in a good place together.`;
+  }
+  if (net === -1) {
+    return `${name} had a few challenging moments today. We worked through them together, and they showed real effort getting back on track. Tomorrow is a fresh opportunity.`;
+  }
+  return `Today was a tough day for ${name}. There were several moments where it was hard to make ready-to-learn choices, and I wanted you to know so we can support them together. We talked through what happened, and ${name} knows tomorrow is a fresh start. Please let me know if you'd like to chat.`;
+}
+
+function buildClosing(net, name) {
+  if (net >= 2) return `Thank you for everything you do at home — it shines through here at school. Have a wonderful evening!`;
+  if (net >= 0) return `Thanks for partnering with us. Have a great evening!`;
+  if (net === -1) return `Thanks for partnering with us as we work through these everyday moments. We're rooting for ${name}!`;
+  return `Thanks for being on the same team with us on the days when school is harder. Your support at home makes such a difference.`;
+}
+
+function describeParentMoment(entry) {
+  const date = new Date(entry.ts);
+  const time = date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  if (entry.direction === 'up') {
+    return `Earned a clip up to "${entry.to}" at ${time} — making a great choice.`;
+  }
+  return `Clipped down to "${entry.to}" at ${time} — we had a tough moment and worked through it.`;
+}
+
+function generateDailyParentPDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const cls = currentClass();
+  const studentId = document.getElementById('studentSelect').value;
+  const student = cls.students.find(s => s.id === studentId);
+  if (!student) return;
+
+  const teacherNote = (document.getElementById('dailyNoteText').value || '').trim();
+  const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+  const todayEntries = cls.log
+    .filter(e => (e.studentId === studentId || e.studentName === student.name) && e.ts >= todayStart.getTime())
+    .sort((a, b) => a.ts - b.ts);
+
+  const ups = todayEntries.filter(e => e.direction === 'up').length;
+  const downs = todayEntries.filter(e => e.direction === 'down').length;
+  const net = ups - downs;
+  const currentLevel = cls.levels.find(l => l.id === student.level);
+  const dateStr = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+
+  // Letter-style header
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(26);
+  doc.setTextColor(44, 42, 74);
+  doc.text("A note about your child's day", 20, 28);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(11);
+  doc.setTextColor(107, 103, 131);
+  doc.text(dateStr, 20, 37);
+
+  doc.setDrawColor(255, 107, 157);
+  doc.setLineWidth(2);
+  doc.line(20, 42, 190, 42);
+
+  let y = 56;
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(13);
+  doc.setTextColor(44, 42, 74);
+  doc.text(`Hi parents of ${student.name},`, 20, y);
+  y += 11;
+
+  const narrative = buildDayNarrative(student, todayEntries, net);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(12);
+  doc.setTextColor(50, 50, 70);
+  const narrativeLines = doc.splitTextToSize(narrative, 170);
+  doc.text(narrativeLines, 20, y);
+  y += narrativeLines.length * 6.2 + 8;
+
+  if (todayEntries.length > 0) {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.setTextColor(44, 42, 74);
+    doc.text("Today's moments:", 20, y);
+    y += 7;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(11);
+    doc.setTextColor(50, 50, 70);
+    todayEntries.forEach(e => {
+      if (y > 250) { doc.addPage(); y = 20; }
+      const lines = doc.splitTextToSize('• ' + describeParentMoment(e), 162);
+      doc.text(lines, 24, y);
+      y += lines.length * 5.8 + 2;
+    });
+    y += 5;
+
+    if (currentLevel) {
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(11);
+      doc.setTextColor(107, 103, 131);
+      doc.text(`${student.name} ended the day at "${currentLevel.name}".`, 20, y);
+      y += 9;
+    }
+  }
+
+  if (teacherNote) {
+    if (y > 220) { doc.addPage(); y = 20; }
+    y += 4;
+    // Soft background box
+    const noteLines = doc.splitTextToSize('"' + teacherNote + '"', 158);
+    const boxHeight = 12 + noteLines.length * 6 + 6;
+    doc.setFillColor(255, 240, 245);
+    doc.setDrawColor(255, 209, 220);
+    doc.setLineWidth(0.5);
+    doc.roundedRect(20, y, 170, boxHeight, 6, 6, 'FD');
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(196, 60, 110);
+    doc.text('A NOTE FROM YOUR TEACHER', 26, y + 8);
+
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(12);
+    doc.setTextColor(60, 60, 80);
+    doc.text(noteLines, 26, y + 16);
+    y += boxHeight + 8;
+  }
+
+  if (y > 240) { doc.addPage(); y = 20; }
+  y += 4;
+  const closing = buildClosing(net, student.name);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(12);
+  doc.setTextColor(50, 50, 70);
+  const closingLines = doc.splitTextToSize(closing, 170);
+  doc.text(closingLines, 20, y);
+  y += closingLines.length * 6.2 + 12;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(11);
+  doc.setTextColor(60);
+  doc.text('— Your teacher', 20, y);
+  y += 14;
+  doc.setDrawColor(180);
+  doc.setLineWidth(0.3);
+  doc.line(20, y, 110, y);
+  y += 5;
+  doc.setFontSize(9);
+  doc.setTextColor(150);
+  doc.text(cls.name, 20, y);
+
+  pdfFooter(doc);
+  doc.save(safeFilename(student.name + ' - Daily Note - ' + new Date().toISOString().slice(0, 10) + '.pdf'));
+}
+
+function pdfHeader(doc, title, subtitle) {
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(22);
+  doc.setTextColor(44, 42, 74);
+  doc.text(title, 20, 22);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(11);
+  doc.setTextColor(107, 103, 131);
+  doc.text(subtitle, 20, 30);
+  doc.setDrawColor(255, 107, 157);
+  doc.setLineWidth(1.5);
+  doc.line(20, 34, 190, 34);
+}
+
+function pdfFooter(doc) {
+  const pages = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= pages; i++) {
+    doc.setPage(i);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(150);
+    doc.text('Generated by Classmazing · ' + new Date().toLocaleDateString(), 20, 287);
+    if (pages > 1) doc.text('Page ' + i + ' of ' + pages, 175, 287);
+  }
+}
+
+function generateSnapshotPDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const cls = currentClass();
+  const dateStr = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+
+  pdfHeader(doc, cls.name, "Today's Snapshot · " + dateStr);
+
+  let y = 48;
+  cls.levels.forEach((level) => {
+    const studentsHere = cls.students.filter(s => s.level === level.id);
+    if (y > 260) { doc.addPage(); y = 20; }
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(13);
+    doc.setTextColor(44, 42, 74);
+    doc.text(level.name + '  (' + studentsHere.length + ')', 20, y);
+    y += 7;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(11);
+    doc.setTextColor(60);
+    if (studentsHere.length === 0) {
+      doc.setTextColor(150);
+      doc.text('— no students —', 26, y);
+      y += 7;
+    } else {
+      const names = studentsHere.map(s => s.name).join(', ');
+      const split = doc.splitTextToSize(names, 165);
+      doc.text(split, 26, y);
+      y += split.length * 5.5 + 4;
+    }
+    y += 4;
+  });
+
+  pdfFooter(doc);
+  doc.save(safeFilename(cls.name + ' - Today.pdf'));
+}
+
+function findCoMovers(cls, studentId, studentName, sinceTs, windowMs) {
+  windowMs = windowMs || (10 * 60 * 1000);
+  const isStudent = e => (e.studentId && e.studentId === studentId) || (!e.studentId && e.studentName === studentName);
+  const studentEntries = cls.log.filter(e => isStudent(e) && e.ts >= sinceTs);
+  const coCounts = {};
+  studentEntries.forEach(entry => {
+    cls.log.forEach(other => {
+      if (other === entry) return;
+      if (isStudent(other)) return;
+      if (other.ts < sinceTs) return;
+      if (Math.abs(other.ts - entry.ts) <= windowMs) {
+        const key = other.studentId || ('name:' + other.studentName);
+        if (!coCounts[key]) coCounts[key] = { name: other.studentName, count: 0, sameDir: 0 };
+        coCounts[key].count++;
+        if (other.direction === entry.direction) coCounts[key].sameDir++;
+      }
+    });
+  });
+  return Object.values(coCounts).sort((a, b) => b.count - a.count).slice(0, 5);
+}
+
+function drawTimeOfDayChart(doc, entries, x, y, width, height) {
+  const buckets = new Array(11).fill(0);
+  let otherHours = 0;
+  entries.forEach(e => {
+    const h = new Date(e.ts).getHours();
+    if (h >= 7 && h <= 17) buckets[h - 7]++;
+    else otherHours++;
+  });
+  const maxCount = Math.max(...buckets, 1);
+  const barWidth = width / 11;
+
+  buckets.forEach((count, i) => {
+    const barHeight = (count / maxCount) * height;
+    const cx = x + i * barWidth + barWidth / 2;
+    if (count > 0) {
+      doc.setFillColor(255, 107, 157);
+      doc.rect(x + i * barWidth + 3, y + height - barHeight, barWidth - 6, barHeight, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8);
+      doc.setTextColor(60);
+      doc.text(String(count), cx, y + height - barHeight - 1.5, { align: 'center' });
+    }
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7);
+    doc.setTextColor(120);
+    const hourNum = i + 7;
+    const label = (hourNum > 12 ? hourNum - 12 : hourNum) + (hourNum >= 12 ? 'p' : 'a');
+    doc.text(label, cx, y + height + 4, { align: 'center' });
+  });
+
+  doc.setDrawColor(180);
+  doc.setLineWidth(0.3);
+  doc.line(x, y + height, x + width, y + height);
+
+  if (otherHours > 0) {
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(8);
+    doc.setTextColor(140);
+    doc.text('(' + otherHours + ' movement' + (otherHours === 1 ? '' : 's') + ' outside 7am-5pm not shown)', x, y + height + 9);
+  }
+}
+
+function generateStudentPDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const cls = currentClass();
+  const studentId = document.getElementById('studentSelect').value;
+  const student = cls.students.find(s => s.id === studentId);
+  if (!student) return;
+  const days = parseInt(document.getElementById('rangeSelect').value, 10);
+  const since = Date.now() - days * 24 * 60 * 60 * 1000;
+  const entries = cls.log.filter(e => (e.studentId === studentId || e.studentName === student.name) && e.ts >= since);
+  const ups = entries.filter(e => e.direction === 'up').length;
+  const downs = entries.filter(e => e.direction === 'down').length;
+  const currentLevelName = cls.levels.find(l => l.id === student.level)?.name || 'Unknown';
+
+  pdfHeader(doc, student.name, cls.name + ' · Last ' + days + ' days');
+
+  let y = 48;
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(13);
+  doc.setTextColor(44, 42, 74);
+  doc.text('Summary', 20, y);
+  y += 8;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(11);
+  doc.setTextColor(60);
+  doc.text('Current level:  ' + currentLevelName, 20, y);
+  y += 6;
+  doc.text('Clip-ups:  ' + ups, 20, y);
+  doc.text('Clip-downs:  ' + downs, 90, y);
+  doc.text('Total movements:  ' + entries.length, 150, y);
+  y += 14;
+
+  // Time-of-Day Pattern
+  if (entries.length > 0) {
+    if (y > 230) { doc.addPage(); y = 20; }
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(13);
+    doc.setTextColor(44, 42, 74);
+    doc.text('Time-of-Day Pattern', 20, y);
+    y += 4;
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(9);
+    doc.setTextColor(120);
+    doc.text('When this student\'s clip tends to move during the school day.', 20, y + 3);
+    y += 8;
+    drawTimeOfDayChart(doc, entries, 20, y, 170, 26);
+    y += 42;
+  }
+
+  // Frequent Co-Movers
+  const coMovers = findCoMovers(cls, studentId, student.name, since);
+  if (coMovers.length > 0) {
+    if (y > 240) { doc.addPage(); y = 20; }
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(13);
+    doc.setTextColor(44, 42, 74);
+    doc.text('Frequent Co-Movers', 20, y);
+    y += 4;
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(9);
+    doc.setTextColor(120);
+    doc.text('Students whose clips moved within 10 minutes of this student\'s.', 20, y + 3);
+    y += 10;
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(107, 103, 131);
+    doc.text('Student', 24, y);
+    doc.text('Co-movements', 90, y);
+    doc.text('Same direction', 140, y);
+    y += 3;
+    doc.setDrawColor(200);
+    doc.setLineWidth(0.3);
+    doc.line(20, y, 195, y);
+    y += 5;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(11);
+    doc.setTextColor(60);
+    coMovers.forEach(co => {
+      doc.text(co.name, 24, y);
+      doc.text(String(co.count), 90, y);
+      const pct = co.count > 0 ? Math.round((co.sameDir / co.count) * 100) : 0;
+      doc.text(co.sameDir + '/' + co.count + '  (' + pct + '%)', 140, y);
+      y += 6;
+    });
+    y += 6;
+  }
+
+  // Activity log
+  if (y > 250) { doc.addPage(); y = 20; }
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(13);
+  doc.setTextColor(44, 42, 74);
+  doc.text('All Activity', 20, y);
+  y += 8;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.setTextColor(60);
+
+  if (entries.length === 0) {
+    doc.setTextColor(150);
+    doc.text('No clip movements in this period.', 20, y);
+  } else {
+    entries.forEach(e => {
+      if (y > 270) { doc.addPage(); y = 20; }
+      const date = new Date(e.ts);
+      const dateStr = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+      const timeStr = date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+      const arrow = e.direction === 'up' ? '↑' : '↓';
+      doc.setTextColor(120);
+      doc.text(dateStr + '  ' + timeStr, 20, y);
+      doc.setTextColor(e.direction === 'up' ? 79 : 217, e.direction === 'up' ? 174 : 83, e.direction === 'up' ? 81 : 79);
+      doc.text(arrow + '  ' + e.to, 65, y);
+      doc.setTextColor(120);
+      doc.text('(from ' + e.from + ')', 110, y);
+      y += 6;
+    });
+  }
+
+  pdfFooter(doc);
+  doc.save(safeFilename(student.name + ' - ' + days + ' days.pdf'));
+}
+
+function generateClassSummaryPDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const cls = currentClass();
+  const days = parseInt(document.getElementById('rangeSelect').value, 10);
+  const since = Date.now() - days * 24 * 60 * 60 * 1000;
+  const entries = cls.log.filter(e => e.ts >= since);
+  const ups = entries.filter(e => e.direction === 'up').length;
+  const downs = entries.filter(e => e.direction === 'down').length;
+
+  // Per-student stats
+  const perStudent = {};
+  cls.students.forEach(s => { perStudent[s.id] = { name: s.name, ups: 0, downs: 0 }; });
+  entries.forEach(e => {
+    const stu = cls.students.find(s => s.id === e.studentId || s.name === e.studentName);
+    if (stu && perStudent[stu.id]) {
+      if (e.direction === 'up') perStudent[stu.id].ups += 1;
+      else perStudent[stu.id].downs += 1;
+    }
+  });
+
+  pdfHeader(doc, cls.name, 'Class Summary · Last ' + days + ' days');
+
+  let y = 48;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(13);
+  doc.setTextColor(44, 42, 74);
+  doc.text('Overview', 20, y);
+  y += 8;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(11);
+  doc.setTextColor(60);
+  doc.text('Total clip-ups:  ' + ups, 20, y);
+  doc.text('Total clip-downs:  ' + downs, 90, y);
+  doc.text('Total movements:  ' + entries.length, 150, y);
+  y += 14;
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(13);
+  doc.text('By Student', 20, y);
+  y += 8;
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.setTextColor(107, 103, 131);
+  doc.text('Student', 20, y);
+  doc.text('Clip-ups', 110, y);
+  doc.text('Clip-downs', 145, y);
+  doc.text('Total', 180, y);
+  y += 4;
+  doc.setDrawColor(200);
+  doc.line(20, y, 195, y);
+  y += 5;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  Object.values(perStudent)
+    .sort((a, b) => (b.ups + b.downs) - (a.ups + a.downs))
+    .forEach(s => {
+      if (y > 270) { doc.addPage(); y = 20; }
+      doc.setTextColor(60);
+      doc.text(s.name, 20, y);
+      doc.setTextColor(79, 174, 81);
+      doc.text(String(s.ups), 110, y);
+      doc.setTextColor(217, 83, 79);
+      doc.text(String(s.downs), 145, y);
+      doc.setTextColor(60);
+      doc.text(String(s.ups + s.downs), 180, y);
+      y += 6;
+    });
+
+  pdfFooter(doc);
+  doc.save(safeFilename(cls.name + ' - Summary - ' + days + ' days.pdf'));
+}
+
+function safeFilename(s) {
+  return s.replace(/[\\/:"*?<>|]+/g, '-').replace(/\s+/g, ' ');
+}
+
+/* ----- Export / Import ----- */
+document.getElementById('exportBtn').addEventListener('click', () => {
+  const data = JSON.stringify(state, null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const dateStr = new Date().toISOString().slice(0, 10);
+  a.href = url;
+  a.download = 'classmazing-backup-' + dateStr + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+document.getElementById('importBtn').addEventListener('click', () => {
+  document.getElementById('restoreInput').click();
+});
+
+document.getElementById('restoreInput').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (evt) => {
+    try {
+      const data = JSON.parse(evt.target.result);
+      const migrated = migrate(data);
+      if (!migrated.classes || !Array.isArray(migrated.classes)) throw new Error('bad');
+      if (!confirm('This will replace your current data with the backup. Continue?')) return;
+      state = migrated;
+      saveState();
+      render();
+      alert('Backup restored successfully.');
+    } catch (err) {
+      alert("Sorry, that file doesn't look like a Classmazing backup.");
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+});
+
+/* ----- Sub mode ----- */
+document.getElementById('subModeStart').addEventListener('click', () => {
+  state.subMode = true;
+  saveState();
+  document.getElementById('panel').classList.remove('open');
+  render();
+});
+
+document.getElementById('subModeQuit').addEventListener('click', () => {
+  state.subMode = false;
+  saveState();
+  render();
+  // If there are notes from this sub session, auto-open settings to surface them
+  if (state.subNotes && state.subNotes.length > 0) {
+    setTimeout(() => {
+      document.getElementById('panel').classList.add('open');
+      const section = document.getElementById('subNotesSection');
+      if (section) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 200);
+  }
+});
+
+document.getElementById('subAddNoteBtn').addEventListener('click', () => {
+  document.getElementById('subNoteText').value = '';
+  document.getElementById('subNoteModal').classList.add('open');
+  setTimeout(() => document.getElementById('subNoteText').focus(), 50);
+});
+
+document.getElementById('subNoteCancel').addEventListener('click', () => {
+  document.getElementById('subNoteModal').classList.remove('open');
+});
+
+document.getElementById('subNoteSave').addEventListener('click', () => {
+  const text = (document.getElementById('subNoteText').value || '').trim();
+  if (!text) {
+    document.getElementById('subNoteModal').classList.remove('open');
+    return;
+  }
+  state.subNotes.push({
+    ts: Date.now(),
+    text,
+    classId: state.currentClassId,
+    className: currentClass().name
+  });
+  saveState();
+  document.getElementById('subNoteModal').classList.remove('open');
+});
+
+document.getElementById('clearSubNotesBtn').addEventListener('click', () => {
+  if (!confirm('Clear all substitute notes?')) return;
+  state.subNotes = [];
+  saveState();
+  renderSubNotes();
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    document.getElementById('panel').classList.remove('open');
+    document.getElementById('resetModal').classList.remove('open');
+    document.getElementById('reportsModal').classList.remove('open');
+    document.getElementById('newClassModal').classList.remove('open');
+    document.getElementById('deleteClassModal').classList.remove('open');
+    document.getElementById('subNoteModal').classList.remove('open');
+    document.getElementById('switcherMenu').classList.remove('open');
+  }
+});
+
+render();
+</script>
+</body>
+</html>
