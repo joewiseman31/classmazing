@@ -358,96 +358,44 @@
     flex: 1;
     display: flex;
     flex-wrap: wrap;
-    gap: 12px;
+    gap: 14px;
     align-items: center;
     min-height: 80px;
-    padding: 4px 0;
+    padding: 8px 0;
     position: relative;
     z-index: 1;
   }
 
   .clip {
-    background: white;
-    border: 3px solid var(--ink);
-    border-radius: 14px;
-    padding: 20px 14px 12px;
-    min-width: 98px;
-    text-align: center;
+    position: relative;
+    width: 40px;
+    height: 80px;
+    flex: 0 0 auto;
     cursor: grab;
     user-select: none;
     -webkit-user-select: none;
     -webkit-touch-callout: none;
     touch-action: none;
-    position: relative;
-    box-shadow: 0 3px 0 var(--ink);
-    transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+    transition: transform 0.15s ease, opacity 0.15s ease;
   }
+
+  .clip-shape {
+    width: 100%;
+    height: 100%;
+    display: block;
+    filter: drop-shadow(0 3px 1px rgba(44,42,74,0.3));
+  }
+
+  .clip:hover { transform: translateY(-4px) rotate(-2deg); }
+  .clip.dragging { opacity: 0.35; cursor: grabbing; }
 
   .clip-ghost {
     position: fixed !important;
     pointer-events: none !important;
     z-index: 1200 !important;
-    transform: scale(1.08) rotate(-2deg);
-    box-shadow: 0 16px 40px rgba(0,0,0,0.3) !important;
-    opacity: 0.92;
+    transform: scale(1.12) rotate(-5deg);
+    opacity: 0.95;
     margin: 0 !important;
-  }
-
-  body.theme-boho .clip {
-    border-width: 2px;
-    box-shadow: 0 3px 8px var(--shadow);
-    border-color: var(--clip-color, var(--accent));
-  }
-
-  .clip[draggable=true] { cursor: grab; }
-
-  .clip-tab {
-    position: absolute;
-    top: -9px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 36px;
-    height: 14px;
-    background: var(--clip-color, var(--accent));
-    border: 3px solid var(--ink);
-    border-bottom: none;
-    border-radius: 6px 6px 0 0;
-  }
-
-  body.theme-boho .clip-tab {
-    border-width: 2px;
-    border-color: var(--clip-color, var(--accent));
-    background: white;
-  }
-
-  .clip:hover { transform: translateY(-3px); box-shadow: 0 6px 0 var(--ink); }
-  body.theme-boho .clip:hover { box-shadow: 0 8px 20px var(--shadow-strong); }
-
-  .clip.dragging { opacity: 0.35; cursor: grabbing; }
-
-  .clip-avatar {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    margin: 0 auto 6px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-    font-size: 16px;
-    color: white;
-    border: 2.5px solid var(--ink);
-    font-family: 'Fredoka', sans-serif;
-  }
-
-  body.theme-boho .clip-avatar { border: none; }
-
-  .clip-name {
-    font-family: 'Fredoka', sans-serif;
-    font-weight: 600;
-    font-size: 15px;
-    color: var(--ink);
-    letter-spacing: -0.005em;
   }
 
   .empty-hint {
@@ -897,6 +845,117 @@
     font-size: 13px;
     padding: 9px 12px;
   }
+
+  /* Mobile move sheet (tap-to-move on phones) */
+  .sheet-back {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    display: none;
+    align-items: flex-end;
+    justify-content: center;
+    z-index: 300;
+  }
+  .sheet-back.open { display: flex; }
+  .sheet {
+    background: var(--surface);
+    width: 100%;
+    max-width: 520px;
+    border-radius: 26px 26px 0 0;
+    border-top: 4px solid var(--ink);
+    padding: 12px 18px calc(24px + env(safe-area-inset-bottom, 0px));
+    box-shadow: 0 -8px 32px rgba(0,0,0,0.25);
+    animation: sheet-up 0.26s cubic-bezier(0.32, 0.72, 0, 1);
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+  body.theme-boho .sheet { border-top: 1px solid rgba(45,42,38,0.15); }
+  @keyframes sheet-up {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+  .sheet-handle {
+    width: 44px;
+    height: 5px;
+    background: rgba(0,0,0,0.18);
+    border-radius: 999px;
+    margin: 0 auto 16px;
+  }
+  .sheet-title {
+    font-family: 'Fredoka', sans-serif;
+    font-size: 21px;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 18px;
+    color: var(--ink);
+  }
+  .sheet-title span { color: var(--accent); }
+  .sheet-levels { display: flex; flex-direction: column; gap: 9px; margin-bottom: 14px; }
+  .sheet-level {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 18px;
+    border: 3px solid var(--ink);
+    border-radius: 16px;
+    background: white;
+    cursor: pointer;
+    font-family: 'Fredoka', sans-serif;
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--ink);
+    box-shadow: 0 3px 0 var(--ink);
+    width: 100%;
+    text-align: left;
+  }
+  body.theme-boho .sheet-level { border-width: 1.5px; border-color: rgba(45,42,38,0.15); box-shadow: none; }
+  .sheet-level:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--ink); }
+  .sheet-level-dot {
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+    border: 2.5px solid var(--ink);
+    flex-shrink: 0;
+  }
+  body.theme-boho .sheet-level-dot { border: none; }
+  .sheet-level.current { background: var(--accent-soft); }
+  .sheet-level .here-tag { margin-left: auto; font-size: 12px; color: var(--ink-soft); font-weight: 600; white-space: nowrap; }
+  .sheet-cancel { width: 100%; justify-content: center; margin-top: 2px; }
+
+  /* Responsive layout for phones */
+  @media (max-width: 600px) {
+    body { padding: 12px 14px 28px; }
+    .bunting { height: 6px; margin-bottom: 12px; }
+    header { flex-direction: column; align-items: stretch; gap: 14px; margin-bottom: 18px; }
+    .title-block h1 { font-size: 30px; }
+    .class-switcher { justify-content: space-between; }
+    .controls { width: 100%; }
+    .controls .btn { flex: 1; justify-content: center; }
+    .sub-banner { flex-direction: column; align-items: stretch; }
+    .sub-banner-buttons { width: 100%; }
+    .sub-banner-buttons .btn { flex: 1; justify-content: center; }
+
+    .level {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 10px;
+      padding: 12px 16px 14px 24px;
+      min-height: auto;
+    }
+    .level::before { width: 12px; }
+    .level-label { flex: none; margin-left: 0; }
+    .level-name { font-size: 21px; }
+
+    .clip-zone { gap: 10px; min-height: 0; padding: 6px 0; }
+    .clip { width: 36px; height: 72px; touch-action: auto; }
+
+    .panel { width: 100%; }
+    .help-foot { font-size: 12px; }
+  }
+
+  @media (max-width: 380px) {
+    .clip { width: 32px; height: 64px; }
+  }
 </style>
 </head>
 <body class="theme-classic">
@@ -1036,7 +1095,7 @@
 <div class="modal-back" id="resetModal">
   <div class="modal">
     <h3>Reset everyone to the middle?</h3>
-    <p>This sends all clips back to the middle level for tomorrow. Today's activity will be cleared too.</p>
+    <p>This sends all clips back to the middle level for a fresh day. Don't worry — your activity history is kept, so reports and past days stay intact.</p>
     <div class="modal-buttons">
       <button class="btn" id="resetCancel">Cancel</button>
       <button class="btn btn-primary" id="resetConfirm">Yes, Reset</button>
@@ -1113,6 +1172,16 @@
       <button class="btn" id="newClassCancel">Cancel</button>
       <button class="btn btn-primary" id="newClassCreate">Create</button>
     </div>
+  </div>
+</div>
+
+<!-- Mobile move sheet -->
+<div class="sheet-back" id="moveSheet">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Move <span id="sheetStudentName"></span> to…</div>
+    <div class="sheet-levels" id="sheetLevels"></div>
+    <button class="btn sheet-cancel" id="sheetCancel">Cancel</button>
   </div>
 </div>
 
@@ -1321,24 +1390,81 @@ function renderChart() {
   });
 }
 
+function initialsOf(name) {
+  const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+  if (parts.length === 2) return (parts[0].charAt(0) + parts[1].charAt(0)).toUpperCase();
+  // 3+ words: first name + middle initial + last name → 3 initials
+  return (parts[0].charAt(0) + parts[1].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+}
+
 function makeClip(student, color) {
   const clip = document.createElement('div');
   clip.className = 'clip';
   clip.dataset.studentId = student.id;
-  clip.style.setProperty('--clip-color', color);
-  const initials = student.name.trim().charAt(0).toUpperCase();
-  const aColor = avatarColor(student.id);
+  const c = avatarColor(student.id);
+  const dark = '#2C2A4A';
+  const initials = initialsOf(student.name);
+  const fs = initials.length === 1 ? 20 : initials.length === 2 ? 16 : 12.5;
   clip.innerHTML = `
-    <div class="clip-tab"></div>
-    <div class="clip-avatar" style="background:${aColor}">${initials}</div>
-    <div class="clip-name">${escapeHtml(student.name)}</div>
+    <svg class="clip-shape" viewBox="0 0 36 76" aria-hidden="true">
+      <path d="M8 46 L6.5 70 Q6.5 72 8.5 72 L13.5 72 Q15.5 72 15.5 70 L15.5 46 Z" fill="${c}" stroke="${dark}" stroke-width="2" stroke-linejoin="round"/>
+      <path d="M20.5 46 L20.5 70 Q20.5 72 22.5 72 L27.5 72 Q29.5 72 29.5 70 L28 46 Z" fill="${c}" stroke="${dark}" stroke-width="2" stroke-linejoin="round"/>
+      <rect x="6" y="2" width="24" height="46" rx="11" fill="${c}" stroke="${dark}" stroke-width="2"/>
+      <line x1="18" y1="8" x2="18" y2="40" stroke="${dark}" stroke-width="1.1" opacity="0.22"/>
+      <ellipse cx="18" cy="46" rx="14.5" ry="6" fill="#CDD2D7" stroke="${dark}" stroke-width="2"/>
+      <ellipse cx="18" cy="46" rx="5.5" ry="2.6" fill="#9AA0A7" stroke="${dark}" stroke-width="0.8"/>
+      <text x="18" y="24" text-anchor="middle" dominant-baseline="central"
+            font-family="'Patrick Hand','Comic Sans MS',cursive" font-size="${fs}" fill="${dark}">${escapeHtml(initials)}</text>
+    </svg>
   `;
   clip.addEventListener('pointerdown', (e) => {
     if (e.button !== undefined && e.button !== 0) return;
+    if (isMobileView()) return; // phones use tap (click) to open the move sheet
     startPointerDrag(clip, student.id, e.clientX, e.clientY);
     e.preventDefault();
   });
+  clip.addEventListener('click', () => {
+    if (isMobileView()) openMoveSheet(student.id);
+  });
   return clip;
+}
+
+function isMobileView() {
+  return window.matchMedia('(max-width: 600px)').matches;
+}
+
+/* ----- Mobile tap-to-move sheet ----- */
+function openMoveSheet(studentId) {
+  const cls = currentClass();
+  const student = cls.students.find(s => s.id === studentId);
+  if (!student) return;
+  document.getElementById('sheetStudentName').textContent = student.name;
+  const container = document.getElementById('sheetLevels');
+  container.innerHTML = '';
+  cls.levels.forEach((level, idx) => {
+    const isHere = level.id === student.level;
+    const btn = document.createElement('button');
+    btn.className = 'sheet-level' + (isHere ? ' current' : '');
+    btn.innerHTML = `
+      <span class="sheet-level-dot" style="background:${levelColorVar(idx)}"></span>
+      <span>${escapeHtml(level.name)}</span>
+      ${isHere ? '<span class="here-tag">✓ here now</span>' : ''}
+    `;
+    btn.addEventListener('click', () => {
+      if (level.id !== student.level) {
+        moveStudent(studentId, level.id, window.innerWidth / 2, window.innerHeight / 2);
+      }
+      closeMoveSheet();
+    });
+    container.appendChild(btn);
+  });
+  document.getElementById('moveSheet').classList.add('open');
+}
+
+function closeMoveSheet() {
+  document.getElementById('moveSheet').classList.remove('open');
 }
 
 /* ----- Drag system: pointer events (works on touch, mouse, and pen) ----- */
@@ -1669,7 +1795,8 @@ document.getElementById('resetConfirm').addEventListener('click', () => {
   const cls = currentClass();
   const middleLevel = cls.levels[Math.floor(cls.levels.length / 2)].id;
   cls.students.forEach(s => s.level = middleLevel);
-  cls.log = [];
+  // NOTE: we intentionally do NOT clear cls.log — it's the permanent history
+  // that powers reports and "go back by day". Reset only repositions clips.
   saveState();
   render();
   document.getElementById('resetModal').classList.remove('open');
@@ -2304,6 +2431,11 @@ document.getElementById('clearSubNotesBtn').addEventListener('click', () => {
   renderSubNotes();
 });
 
+document.getElementById('sheetCancel').addEventListener('click', closeMoveSheet);
+document.getElementById('moveSheet').addEventListener('click', (e) => {
+  if (e.target.id === 'moveSheet') closeMoveSheet();
+});
+
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     document.getElementById('panel').classList.remove('open');
@@ -2312,6 +2444,7 @@ document.addEventListener('keydown', (e) => {
     document.getElementById('newClassModal').classList.remove('open');
     document.getElementById('deleteClassModal').classList.remove('open');
     document.getElementById('subNoteModal').classList.remove('open');
+    document.getElementById('moveSheet').classList.remove('open');
     document.getElementById('switcherMenu').classList.remove('open');
   }
 });
