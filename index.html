@@ -690,6 +690,77 @@
   body.theme-boho .activity-option:hover { transform: none; background: var(--accent-soft); }
   .activity-option.current { background: var(--accent-soft); border-color: var(--accent); }
 
+  /* Tag prompt (floating toast after clip move) */
+  .tag-prompt {
+    position: fixed;
+    bottom: 22px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--surface);
+    border: 3px solid var(--ink);
+    border-radius: 999px;
+    padding: 9px 12px 9px 16px;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.25);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    z-index: 1100;
+    max-width: calc(100vw - 24px);
+    overflow-x: auto;
+    animation: tag-slide-up 0.22s cubic-bezier(0.32, 0.72, 0, 1);
+    font-family: 'Fredoka', sans-serif;
+  }
+  body.theme-boho .tag-prompt { border-width: 1px; border-color: rgba(45,42,38,0.15); }
+  .tag-prompt.fading { opacity: 0; transition: opacity 0.3s; }
+  @keyframes tag-slide-up {
+    from { transform: translate(-50%, 140%); opacity: 0; }
+    to { transform: translate(-50%, 0); opacity: 1; }
+  }
+  .tag-prompt-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--ink);
+    white-space: nowrap;
+    flex-shrink: 0;
+    padding-right: 4px;
+  }
+  .tag-prompt-label .arrow-up { color: #4FAE51; }
+  .tag-prompt-label .arrow-down { color: #D9534F; }
+  .tag-prompt-chip {
+    padding: 7px 13px;
+    border-radius: 999px;
+    background: var(--accent-soft);
+    border: 2px solid var(--ink);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    font-family: inherit;
+    color: var(--ink);
+    transition: transform 0.1s, background 0.1s;
+  }
+  body.theme-boho .tag-prompt-chip { border-width: 1.5px; border-color: rgba(45,42,38,0.15); }
+  .tag-prompt-chip:hover { background: var(--accent); color: white; transform: translateY(-1px); }
+  .tag-prompt-chip.corrective { background: rgba(255,180,180,0.5); }
+  .tag-prompt-chip.corrective:hover { background: #D9534F; color: white; }
+  .tag-prompt-skip {
+    background: transparent;
+    border: none;
+    color: var(--ink-soft);
+    cursor: pointer;
+    font-size: 13px;
+    padding: 6px 10px;
+    font-family: inherit;
+    font-weight: 500;
+  }
+  .tag-prompt-skip:hover { color: var(--ink); }
+
+  @media (max-width: 600px) {
+    .tag-prompt { bottom: 12px; padding: 8px 10px 8px 12px; gap: 6px; }
+    .tag-prompt-label { font-size: 12px; }
+    .tag-prompt-chip { padding: 6px 10px; font-size: 12px; }
+  }
+
   /* Display mode picker */
   .display-mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .display-mode-card {
@@ -1169,6 +1240,24 @@
   </div>
 
   <div class="panel-section">
+    <h3>Praise tags (for clips going up)</h3>
+    <div id="positiveTagsList"></div>
+    <button class="add-btn" id="addPositiveTagBtn">+ Add praise tag</button>
+    <div style="font-size: 12px; color: var(--ink-soft); margin-top: 8px; line-height: 1.4;">
+      One-tap chips shown after a clip moves up. Tapping one names the specific strength on the clip-up — way more meaningful for kids and parents than generic "good job."
+    </div>
+  </div>
+
+  <div class="panel-section">
+    <h3>Behavior tags (for clips going down)</h3>
+    <div id="correctiveTagsList"></div>
+    <button class="add-btn" id="addCorrectiveTagBtn">+ Add behavior tag</button>
+    <div style="font-size: 12px; color: var(--ink-soft); margin-top: 8px; line-height: 1.4;">
+      Optional. Describes what happened, not who the kid is. Used in reports to spot patterns.
+    </div>
+  </div>
+
+  <div class="panel-section">
     <h3>Levels (top to bottom)</h3>
     <div id="levelsList"></div>
     <button class="add-btn" id="addLevelBtn">+ Add level</button>
@@ -1379,6 +1468,29 @@ function defaultActivities() {
   ];
 }
 
+function defaultPositiveTags() {
+  // Strength-based language, drawn from Marzano/Lemov on specific praise.
+  return [
+    'Kindness',
+    'Perseverance',
+    'Helping a peer',
+    'Taking ownership',
+    'Courage',
+    'Focus'
+  ];
+}
+
+function defaultCorrectiveTags() {
+  // Behavior-descriptive, never character-judgmental.
+  return [
+    'Blurting',
+    'Off-task',
+    'Transition trouble',
+    'Materials',
+    'Body in space'
+  ];
+}
+
 function makeClass(name) {
   return {
     id: 'c' + Date.now() + Math.floor(Math.random() * 1000),
@@ -1387,6 +1499,8 @@ function makeClass(name) {
     displayMode: 'initials', // 'initials' | 'firstName' | 'fullName' | 'number'
     activities: defaultActivities(),
     currentActivity: null,
+    positiveTags: defaultPositiveTags(),
+    correctiveTags: defaultCorrectiveTags(),
     levels: defaultLevels(),
     students: defaultStudents(),
     log: []
@@ -1405,6 +1519,8 @@ const DEFAULT_STATE = {
     displayMode: 'initials',
     activities: defaultActivities(),
     currentActivity: null,
+    positiveTags: defaultPositiveTags(),
+    correctiveTags: defaultCorrectiveTags(),
     levels: defaultLevels(),
     students: defaultStudents(),
     log: []
@@ -1419,6 +1535,8 @@ function migrate(saved) {
       if (!c.displayMode) c.displayMode = 'initials';
       if (!Array.isArray(c.activities)) c.activities = defaultActivities();
       if (c.currentActivity === undefined) c.currentActivity = null;
+      if (!Array.isArray(c.positiveTags)) c.positiveTags = defaultPositiveTags();
+      if (!Array.isArray(c.correctiveTags)) c.correctiveTags = defaultCorrectiveTags();
     });
     return saved;
   }
@@ -1435,6 +1553,8 @@ function migrate(saved) {
         displayMode: 'initials',
         activities: defaultActivities(),
         currentActivity: null,
+        positiveTags: defaultPositiveTags(),
+        correctiveTags: defaultCorrectiveTags(),
         levels: saved.levels,
         students: saved.students || [],
         log: saved.log || []
@@ -1744,20 +1864,73 @@ function moveStudent(studentId, newLevelId, x, y) {
   const fromName = cls.levels[fromIdx].name;
   const toName = cls.levels[toIdx].name;
   student.level = newLevelId;
-  cls.log.unshift({
+  const direction = toIdx < fromIdx ? 'up' : 'down';
+  const entry = {
     studentId: student.id,
     studentName: student.name,
     from: fromName,
     to: toName,
-    direction: toIdx < fromIdx ? 'up' : 'down',
+    direction,
     activity: cls.currentActivity || null,
+    tag: null,
     time: nowTime(),
     ts: Date.now()
-  });
+  };
+  cls.log.unshift(entry);
   if (cls.log.length > 2000) cls.log.length = 2000;
   saveState();
   render();
   if (toIdx === 0 && fromIdx > 0) celebrate(x, y);
+  if (!state.subMode) showTagPrompt(entry, direction);
+}
+
+/* ----- Tag prompt (floating toast after every clip move) ----- */
+let activeTagPrompt = null;
+
+function showTagPrompt(logEntry, direction) {
+  dismissTagPrompt();
+  const cls = currentClass();
+  const tags = direction === 'up'
+    ? (cls.positiveTags || defaultPositiveTags())
+    : (cls.correctiveTags || defaultCorrectiveTags());
+  if (!tags || tags.length === 0) return;
+
+  // Use the teacher-facing display name (full name) on the prompt — the teacher always sees real names
+  const displayName = logEntry.studentName;
+  const arrow = direction === 'up' ? '↑' : '↓';
+  const arrowCls = direction === 'up' ? 'arrow-up' : 'arrow-down';
+  const chipCls = direction === 'up' ? 'tag-prompt-chip' : 'tag-prompt-chip corrective';
+
+  const el = document.createElement('div');
+  el.className = 'tag-prompt';
+  el.innerHTML = `
+    <span class="tag-prompt-label"><strong>${escapeHtml(displayName)}</strong> <span class="${arrowCls}">${arrow}</span> tag with:</span>
+    ${tags.map(t => `<button class="${chipCls}" data-tag="${escapeHtml(t)}">${escapeHtml(t)}</button>`).join('')}
+    <button class="tag-prompt-skip" data-action="skip">Skip</button>
+  `;
+  document.body.appendChild(el);
+
+  el.addEventListener('click', (e) => {
+    const chip = e.target.closest('[data-tag]');
+    const skip = e.target.closest('[data-action="skip"]');
+    if (chip) {
+      logEntry.tag = chip.dataset.tag;
+      saveState();
+    }
+    dismissTagPrompt();
+  });
+
+  const timer = setTimeout(() => dismissTagPrompt(), 6500);
+  activeTagPrompt = { element: el, timer };
+}
+
+function dismissTagPrompt() {
+  if (!activeTagPrompt) return;
+  clearTimeout(activeTagPrompt.timer);
+  const el = activeTagPrompt.element;
+  el.classList.add('fading');
+  setTimeout(() => el.remove(), 280);
+  activeTagPrompt = null;
 }
 
 function celebrate(x, y) {
@@ -1912,6 +2085,22 @@ function renderPanel() {
     `;
     activitiesList.appendChild(row);
   });
+
+  const renderTagList = (containerId, tags, kind) => {
+    const list = document.getElementById(containerId);
+    list.innerHTML = '';
+    (tags || []).forEach((t, i) => {
+      const row = document.createElement('div');
+      row.className = 'row';
+      row.innerHTML = `
+        <input type="text" data-${kind}-tag-index="${i}" value="${escapeHtml(t)}" placeholder="Tag name">
+        <button class="icon-btn" data-action="remove-${kind}-tag" data-${kind}-tag-index="${i}" title="Remove">×</button>
+      `;
+      list.appendChild(row);
+    });
+  };
+  renderTagList('positiveTagsList', cls.positiveTags, 'positive');
+  renderTagList('correctiveTagsList', cls.correctiveTags, 'corrective');
 
   const log = document.getElementById('activityLog');
   if (cls.log.length === 0) {
@@ -2077,6 +2266,43 @@ document.getElementById('activitiesList').addEventListener('click', (e) => {
 
 document.getElementById('addActivityBtn').addEventListener('click', () => {
   currentClass().activities.push('New activity');
+  saveState();
+  render();
+});
+
+/* ----- Praise + behavior tags ----- */
+function wireTagListHandlers(listId, fieldName, kind) {
+  const listEl = document.getElementById(listId);
+  listEl.addEventListener('input', (e) => {
+    const input = e.target.closest(`input[data-${kind}-tag-index]`);
+    if (!input) return;
+    const cls = currentClass();
+    const idx = parseInt(input.dataset[kind + 'TagIndex'], 10);
+    cls[fieldName][idx] = input.value;
+    saveState();
+  });
+  listEl.addEventListener('click', (e) => {
+    const btn = e.target.closest(`[data-action="remove-${kind}-tag"]`);
+    if (!btn) return;
+    const cls = currentClass();
+    const idx = parseInt(btn.dataset[kind + 'TagIndex'], 10);
+    cls[fieldName].splice(idx, 1);
+    saveState();
+    render();
+  });
+}
+
+wireTagListHandlers('positiveTagsList', 'positiveTags', 'positive');
+wireTagListHandlers('correctiveTagsList', 'correctiveTags', 'corrective');
+
+document.getElementById('addPositiveTagBtn').addEventListener('click', () => {
+  currentClass().positiveTags.push('New tag');
+  saveState();
+  render();
+});
+
+document.getElementById('addCorrectiveTagBtn').addEventListener('click', () => {
+  currentClass().correctiveTags.push('New tag');
   saveState();
   render();
 });
