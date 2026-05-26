@@ -690,6 +690,107 @@
   body.theme-boho .activity-option:hover { transform: none; background: var(--accent-soft); }
   .activity-option.current { background: var(--accent-soft); border-color: var(--accent); }
 
+  /* Teacher dashboard: insights */
+  .insights-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .insight-card {
+    background: white;
+    border: 2.5px solid var(--ink);
+    border-radius: 14px;
+    padding: 12px 14px;
+    box-shadow: 0 3px 0 var(--ink);
+  }
+  body.theme-boho .insight-card { border-width: 1px; border-color: rgba(45,42,38,0.1); box-shadow: 0 1px 4px var(--shadow); }
+  .insight-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 700;
+    color: var(--ink-soft);
+    margin-bottom: 4px;
+  }
+  .insight-value {
+    font-family: 'Fredoka', sans-serif;
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--ink);
+    line-height: 1.1;
+  }
+  .insight-value.green { color: #4FAE51; }
+  .insight-value.yellow { color: #D89C2F; }
+  .insight-value.red { color: #D9534F; }
+  .insight-sub { font-size: 12px; color: var(--ink-soft); margin-top: 4px; }
+  .insight-coach {
+    background: var(--accent-soft);
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 13px;
+    color: var(--ink);
+    line-height: 1.4;
+    margin-bottom: 12px;
+    border-left: 3px solid var(--accent);
+  }
+  .insights-flags {
+    background: white;
+    border-radius: 12px;
+    padding: 4px 14px;
+    border: 2px solid var(--ink);
+  }
+  body.theme-boho .insights-flags { border: 1px solid rgba(45,42,38,0.1); }
+  .insights-flags:empty { display: none; }
+  .flag-header {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-soft);
+    font-weight: 700;
+    padding: 10px 0 6px;
+  }
+  .flag-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(0,0,0,0.06);
+    font-size: 14px;
+  }
+  .flag-row:last-child { border: none; }
+  .flag-name { font-weight: 600; color: var(--ink); }
+  .flag-meta { font-size: 12px; color: var(--ink-soft); }
+  .tier-badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 999px;
+    margin-left: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .tier-badge.t2 { background: #FFE9A0; color: #6B5414; }
+  .tier-badge.t3 { background: #FFD0CC; color: #862A2A; }
+  .insights-flags-empty {
+    padding: 14px 0;
+    color: var(--ink-soft);
+    font-size: 13px;
+    text-align: center;
+    font-style: italic;
+  }
+  .insights-equity {
+    margin-top: 10px;
+    background: #FFF8E1;
+    border-left: 3px solid #D89C2F;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    color: var(--ink);
+    line-height: 1.45;
+  }
+
   /* Tag prompt (floating toast after clip move) */
   .tag-prompt {
     position: fixed;
@@ -1154,6 +1255,16 @@
     <button class="close" id="closeBtn" aria-label="Close settings">×</button>
   </div>
 
+  <div class="panel-section" id="insightsSection">
+    <h3>This week's snapshot</h3>
+    <div class="insights-grid" id="insightsGrid"></div>
+    <div class="insights-flags" id="insightsFlags"></div>
+    <div class="insights-equity" id="insightsEquity" style="display:none"></div>
+    <div style="font-size: 11px; color: var(--ink-soft); margin-top: 10px; line-height: 1.4;">
+      Just for you. Nothing here shows on the projected chart or gets shared.
+    </div>
+  </div>
+
   <div class="panel-section">
     <h3>Class Name</h3>
     <input type="text" id="classNameInput" placeholder="Mrs. Anderson's Class">
@@ -1338,6 +1449,10 @@
           <div class="report-type-name">📬 Daily Parent Report</div>
           <div class="report-type-desc">A warm, narrative note about today — print or email home</div>
         </button>
+        <button class="report-type-card" data-type="tier-snapshot">
+          <div class="report-type-name">📊 Tier Snapshot</div>
+          <div class="report-type-desc">PBIS-style class breakdown by tier — for admin and grade-level meetings</div>
+        </button>
       </div>
     </div>
 
@@ -1491,6 +1606,17 @@ function defaultCorrectiveTags() {
   ];
 }
 
+function defaultTierConfig() {
+  // Research-standard thresholds (Sugai, Sprick). 14-day rolling window.
+  // Counts are clip-down (corrective) events.
+  return {
+    windowDays: 14,
+    tier2: 6,   // 3 per week × 2 weeks
+    tier3: 10,  // 5 per week × 2 weeks
+    targetRatio: 4 // 4 positives per 1 corrective (Sprick/Sugai standard)
+  };
+}
+
 function makeClass(name) {
   return {
     id: 'c' + Date.now() + Math.floor(Math.random() * 1000),
@@ -1501,6 +1627,7 @@ function makeClass(name) {
     currentActivity: null,
     positiveTags: defaultPositiveTags(),
     correctiveTags: defaultCorrectiveTags(),
+    tierConfig: defaultTierConfig(),
     levels: defaultLevels(),
     students: defaultStudents(),
     log: []
@@ -1521,6 +1648,7 @@ const DEFAULT_STATE = {
     currentActivity: null,
     positiveTags: defaultPositiveTags(),
     correctiveTags: defaultCorrectiveTags(),
+    tierConfig: defaultTierConfig(),
     levels: defaultLevels(),
     students: defaultStudents(),
     log: []
@@ -1537,6 +1665,7 @@ function migrate(saved) {
       if (c.currentActivity === undefined) c.currentActivity = null;
       if (!Array.isArray(c.positiveTags)) c.positiveTags = defaultPositiveTags();
       if (!Array.isArray(c.correctiveTags)) c.correctiveTags = defaultCorrectiveTags();
+      if (!c.tierConfig || typeof c.tierConfig !== 'object') c.tierConfig = defaultTierConfig();
     });
     return saved;
   }
@@ -1602,6 +1731,69 @@ function levelColorVar(idx) { return `var(--level-${idx + 1})`; }
 function levelIndex(cls, id) { return cls.levels.findIndex(l => l.id === id); }
 function nowTime() { return new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); }
 
+function computeInsights(cls) {
+  const log = cls.log || [];
+  const cfg = cls.tierConfig || defaultTierConfig();
+  const now = Date.now();
+  const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+  const weekAgo = now - 7 * 24 * 60 * 60 * 1000;
+  const windowMs = (cfg.windowDays || 14) * 24 * 60 * 60 * 1000;
+  const tierWindowStart = now - windowMs;
+
+  let todayUp = 0, todayDown = 0, weekUp = 0, weekDown = 0;
+  const studentDownCounts = {};
+
+  log.forEach(e => {
+    if (e.ts >= todayStart.getTime()) {
+      if (e.direction === 'up') todayUp++; else todayDown++;
+    }
+    if (e.ts >= weekAgo) {
+      if (e.direction === 'up') weekUp++; else weekDown++;
+    }
+    if (e.ts >= tierWindowStart && e.direction === 'down') {
+      const key = e.studentId || ('name:' + e.studentName);
+      studentDownCounts[key] = (studentDownCounts[key] || 0) + 1;
+    }
+  });
+
+  const ratioFmt = (up, down) => down === 0 ? (up > 0 ? `${up}:0 ✨` : '—') : (up / down).toFixed(1) + ':1';
+
+  // Tier classification
+  const flags = [];
+  cls.students.forEach(s => {
+    const count = studentDownCounts[s.id] || studentDownCounts['name:' + s.name] || 0;
+    let tier = 1;
+    if (count >= cfg.tier3) tier = 3;
+    else if (count >= cfg.tier2) tier = 2;
+    if (tier > 1) {
+      flags.push({ id: s.id, name: s.name, count, tier });
+    }
+  });
+  flags.sort((a, b) => b.count - a.count);
+
+  // Equity self-check: surface if one student is disproportionately moved down
+  let equityFlag = null;
+  if (flags.length > 0 && weekDown >= 8) {
+    const top = flags[0];
+    const proportion = top.count / weekDown;
+    if (proportion >= 0.4 && flags[0].tier >= 2) {
+      equityFlag = { name: top.name, count: top.count, total: weekDown, proportion };
+    }
+  }
+
+  return {
+    todayUp, todayDown,
+    weekUp, weekDown,
+    todayRatio: ratioFmt(todayUp, todayDown),
+    weekRatio: ratioFmt(weekUp, weekDown),
+    weekRatioNum: weekDown === 0 ? Infinity : weekUp / weekDown,
+    targetRatio: cfg.targetRatio || 4,
+    flags,
+    equityFlag,
+    windowDays: cfg.windowDays || 14
+  };
+}
+
 function todayString() {
   const opts = { weekday: 'long', month: 'long', day: 'numeric' };
   return new Date().toLocaleDateString(undefined, opts);
@@ -1618,6 +1810,7 @@ function render() {
   renderPanel();
   renderSwitcher();
   renderSubNotes();
+  renderInsights();
 }
 
 function renderSubNotes() {
@@ -1655,6 +1848,65 @@ function renderActivityChip() {
   } else {
     text.textContent = 'Set activity';
     chip.classList.remove('has-activity');
+  }
+}
+
+function renderInsights() {
+  const cls = currentClass();
+  const ins = computeInsights(cls);
+  const grid = document.getElementById('insightsGrid');
+  const target = ins.targetRatio;
+
+  // Color coding for week ratio vs target
+  const ratioClass = ins.weekRatioNum >= target ? 'green'
+                   : ins.weekRatioNum >= target / 2 ? 'yellow' : 'red';
+
+  grid.innerHTML = `
+    <div class="insight-card">
+      <div class="insight-label">Today</div>
+      <div class="insight-value">${escapeHtml(ins.todayRatio)}</div>
+      <div class="insight-sub">${ins.todayUp} ↑ · ${ins.todayDown} ↓</div>
+    </div>
+    <div class="insight-card">
+      <div class="insight-label">7-day ratio</div>
+      <div class="insight-value ${ratioClass}">${escapeHtml(ins.weekRatio)}</div>
+      <div class="insight-sub">target ${target}:1 · ${ins.weekUp} ↑ · ${ins.weekDown} ↓</div>
+    </div>
+  `;
+
+  // Gentle coach message if ratio is low and there's been meaningful activity this week
+  let coachHTML = '';
+  if (ins.weekDown >= 3 && ins.weekRatioNum < target) {
+    coachHTML = `<div class="insight-coach">Research finds the most positive classroom cultures land near ${target} clip-ups for every clip-down. You're at ${escapeHtml(ins.weekRatio)} this week — a few specific praise moments to the kids who are quietly doing the right thing can shift the whole room.</div>`;
+  }
+
+  // Tier flags
+  const flags = document.getElementById('insightsFlags');
+  if (ins.flags.length === 0) {
+    flags.innerHTML = coachHTML + `<div class="insights-flags-empty">No students flagged in the last ${ins.windowDays} days.</div>`;
+  } else {
+    flags.innerHTML = coachHTML + `
+      <div class="flag-header">Patterns over the last ${ins.windowDays} days</div>
+      ${ins.flags.map(f => `
+        <div class="flag-row">
+          <div>
+            <span class="flag-name">${escapeHtml(f.name)}</span>
+            <span class="tier-badge t${f.tier}">Tier ${f.tier}</span>
+          </div>
+          <span class="flag-meta">${f.count} clip-downs</span>
+        </div>
+      `).join('')}
+    `;
+  }
+
+  // Equity quiet check
+  const eq = document.getElementById('insightsEquity');
+  if (ins.equityFlag) {
+    const pct = Math.round(ins.equityFlag.proportion * 100);
+    eq.innerHTML = `A gentle self-check: <strong>${escapeHtml(ins.equityFlag.name)}</strong> accounts for ${pct}% of this week's clip-downs (${ins.equityFlag.count} of ${ins.equityFlag.total}). Worth a thought — sometimes one student carries more correction than is fair to them. Just for you to notice.`;
+    eq.style.display = 'block';
+  } else {
+    eq.style.display = 'none';
   }
 }
 
@@ -2342,6 +2594,7 @@ document.getElementById('reportTypeGrid').addEventListener('click', (e) => {
   document.querySelectorAll('.report-type-card').forEach(c => c.classList.remove('active'));
   card.classList.add('active');
   reportType = card.dataset.type;
+  // Tier snapshot uses the class's tierConfig window — no inputs needed
   const needsStudent = reportType === 'student' || reportType === 'daily-parent';
   const needsRange = reportType === 'student' || reportType === 'class-summary';
   const needsNote = reportType === 'daily-parent';
@@ -2361,8 +2614,203 @@ document.getElementById('reportsGenerate').addEventListener('click', () => {
   else if (reportType === 'student') generateStudentPDF();
   else if (reportType === 'class-summary') generateClassSummaryPDF();
   else if (reportType === 'daily-parent') generateDailyParentPDF();
+  else if (reportType === 'tier-snapshot') generateTierSnapshotPDF();
   document.getElementById('reportsModal').classList.remove('open');
 });
+
+function generateTierSnapshotPDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const cls = currentClass();
+  const ins = computeInsights(cls);
+  const cfg = cls.tierConfig || defaultTierConfig();
+  const dateStr = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+
+  pdfHeader(doc, cls.name, `Tier Snapshot · ${dateStr}`);
+
+  let y = 48;
+
+  // Overview block
+  const totalStudents = cls.students.length;
+  const t2Count = ins.flags.filter(f => f.tier === 2).length;
+  const t3Count = ins.flags.filter(f => f.tier === 3).length;
+  const t1Count = Math.max(0, totalStudents - t2Count - t3Count);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(13);
+  doc.setTextColor(44, 42, 74);
+  doc.text('Class breakdown', 20, y);
+  y += 9;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(11);
+  doc.setTextColor(60);
+  doc.text(`Total students: ${totalStudents}`, 20, y);
+  y += 7;
+  doc.text(`Tier 1 (universal support): ${t1Count}  (${Math.round(t1Count / totalStudents * 100)}%)`, 24, y);
+  y += 6;
+  doc.text(`Tier 2 (targeted support): ${t2Count}  (${Math.round(t2Count / totalStudents * 100)}%)`, 24, y);
+  y += 6;
+  doc.text(`Tier 3 (intensive support): ${t3Count}  (${Math.round(t3Count / totalStudents * 100)}%)`, 24, y);
+  y += 10;
+
+  doc.setFont('helvetica', 'italic');
+  doc.setFontSize(9);
+  doc.setTextColor(120);
+  doc.text(`Thresholds: Tier 2 ≥ ${cfg.tier2} corrective events / ${cfg.windowDays}-day window; Tier 3 ≥ ${cfg.tier3}.`, 20, y);
+  y += 12;
+
+  // 4:1 ratio block
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(13);
+  doc.setTextColor(44, 42, 74);
+  doc.text('Positive-to-corrective ratio (7 days)', 20, y);
+  y += 9;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(11);
+  doc.setTextColor(60);
+  doc.text(`Current: ${ins.weekRatio}`, 24, y);
+  doc.text(`Target: ${ins.targetRatio}:1`, 90, y);
+  doc.text(`Positives: ${ins.weekUp}`, 140, y);
+  doc.text(`Correctives: ${ins.weekDown}`, 170, y);
+  y += 14;
+
+  // Tier 2/3 students with details
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(13);
+  doc.setTextColor(44, 42, 74);
+  doc.text(`Students flagged for review (last ${cfg.windowDays} days)`, 20, y);
+  y += 9;
+
+  if (ins.flags.length === 0) {
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(11);
+    doc.setTextColor(120);
+    doc.text('No students currently meet Tier 2 or Tier 3 thresholds.', 20, y);
+    y += 10;
+  } else {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(107, 103, 131);
+    doc.text('Student', 20, y);
+    doc.text('Tier', 105, y);
+    doc.text('Corrective events', 130, y);
+    doc.text('Top context', 175, y);
+    y += 3;
+    doc.setDrawColor(200);
+    doc.setLineWidth(0.3);
+    doc.line(20, y, 195, y);
+    y += 5;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(11);
+    doc.setTextColor(60);
+
+    const windowStart = Date.now() - cfg.windowDays * 24 * 60 * 60 * 1000;
+    ins.flags.forEach(f => {
+      if (y > 270) { doc.addPage(); y = 20; }
+      // Top activity context for this student in the window
+      const studentEntries = cls.log.filter(e =>
+        (e.studentId === f.id || e.studentName === f.name) &&
+        e.ts >= windowStart && e.direction === 'down'
+      );
+      const actCounts = {};
+      studentEntries.forEach(e => {
+        const a = e.activity || 'Untagged';
+        actCounts[a] = (actCounts[a] || 0) + 1;
+      });
+      const topAct = Object.entries(actCounts).sort((a, b) => b[1] - a[1])[0];
+      const topActStr = topAct ? `${topAct[0]} (${topAct[1]})` : '—';
+
+      doc.text(f.name, 20, y);
+      doc.text('Tier ' + f.tier, 105, y);
+      doc.text(String(f.count), 130, y);
+      doc.text(topActStr, 175, y);
+      y += 6;
+    });
+    y += 6;
+  }
+
+  // Class-wide patterns
+  if (y > 240) { doc.addPage(); y = 20; }
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(13);
+  doc.setTextColor(44, 42, 74);
+  doc.text(`Class-wide pattern (last ${cfg.windowDays} days)`, 20, y);
+  y += 9;
+
+  const windowStart = Date.now() - cfg.windowDays * 24 * 60 * 60 * 1000;
+  const recentLog = cls.log.filter(e => e.ts >= windowStart);
+  const activityCounts = {};
+  const hourCounts = {};
+  recentLog.forEach(e => {
+    if (e.direction !== 'down') return;
+    const a = e.activity || 'Untagged';
+    activityCounts[a] = (activityCounts[a] || 0) + 1;
+    const h = new Date(e.ts).getHours();
+    hourCounts[h] = (hourCounts[h] || 0) + 1;
+  });
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(11);
+  doc.setTextColor(60);
+  const topActs = Object.entries(activityCounts).sort((a, b) => b[1] - a[1]).slice(0, 3);
+  if (topActs.length === 0) {
+    doc.text('Not enough activity context tagged yet.', 20, y);
+    y += 8;
+  } else {
+    doc.text('Activities with most corrective events:', 20, y);
+    y += 6;
+    topActs.forEach(([a, n]) => {
+      doc.text(`• ${a}: ${n}`, 26, y);
+      y += 5.5;
+    });
+    y += 4;
+  }
+
+  const topHours = Object.entries(hourCounts).sort((a, b) => b[1] - a[1]).slice(0, 3);
+  if (topHours.length > 0) {
+    doc.text('Times of day with most corrective events:', 20, y);
+    y += 6;
+    topHours.forEach(([h, n]) => {
+      const hNum = parseInt(h, 10);
+      const label = (hNum > 12 ? hNum - 12 : hNum) + (hNum >= 12 ? ' PM' : ' AM');
+      doc.text(`• ${label}: ${n}`, 26, y);
+      y += 5.5;
+    });
+    y += 6;
+  }
+
+  // Suggested next steps
+  if (y > 245) { doc.addPage(); y = 20; }
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(13);
+  doc.setTextColor(44, 42, 74);
+  doc.text('Suggested next steps', 20, y);
+  y += 9;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(11);
+  doc.setTextColor(60);
+  const suggestions = [];
+  if (t2Count > 0) suggestions.push('Review Tier 2 students at next grade-level data meeting; consider small-group check-ins.');
+  if (t3Count > 0) suggestions.push('Bring Tier 3 students to SST/IEP team for intervention planning.');
+  if (ins.weekRatioNum < ins.targetRatio && ins.weekDown >= 3) {
+    suggestions.push(`Class-wide positive-to-corrective ratio is ${ins.weekRatio} — below the ${ins.targetRatio}:1 research-recommended ratio. Consider increasing specific-praise frequency.`);
+  }
+  if (topActs.length > 0 && topActs[0][1] >= 3) {
+    suggestions.push(`Most corrective events cluster in ${topActs[0][0]}. Worth a closer look at transitions, pacing, or expectations during that block.`);
+  }
+  if (suggestions.length === 0) {
+    suggestions.push('Class is within Tier 1 norms. Continue current universal supports.');
+  }
+  suggestions.forEach(s => {
+    const lines = doc.splitTextToSize('• ' + s, 170);
+    doc.text(lines, 20, y);
+    y += lines.length * 5.5 + 2;
+  });
+
+  pdfFooter(doc);
+  doc.save(safeFilename(cls.name + ' - Tier Snapshot - ' + new Date().toISOString().slice(0, 10) + '.pdf'));
+}
 
 function buildDayNarrative(student, todayEntries, net) {
   const name = student.name;
