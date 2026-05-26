@@ -639,6 +639,34 @@
 
   body.theme-boho .theme-swatch { border: none; }
 
+  /* Display mode picker */
+  .display-mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .display-mode-card {
+    padding: 12px 10px;
+    border-radius: 12px;
+    border: 2.5px solid var(--ink);
+    cursor: pointer;
+    background: white;
+    text-align: center;
+    font-family: inherit;
+    transition: all 0.15s;
+    box-shadow: 0 3px 0 var(--ink);
+  }
+  body.theme-boho .display-mode-card { border-width: 1.5px; border-color: rgba(45,42,38,0.15); box-shadow: none; }
+  .display-mode-card:hover { transform: translateY(-2px); box-shadow: 0 5px 0 var(--ink); }
+  body.theme-boho .display-mode-card:hover { transform: none; background: var(--accent-soft); }
+  .display-mode-card.active { background: var(--accent-soft); }
+  body.theme-boho .display-mode-card.active { border-color: var(--accent); background: white; }
+  .dm-name { font-family: 'Fredoka', sans-serif; font-size: 13px; font-weight: 700; color: var(--ink); }
+  .dm-example {
+    font-family: 'Patrick Hand', cursive;
+    font-size: 22px;
+    margin: 6px 0 4px;
+    color: var(--accent);
+    font-weight: 700;
+  }
+  .dm-desc { font-size: 11px; color: var(--ink-soft); }
+
   /* Sparkle */
   @keyframes sparkle-pop {
     0% { transform: translate(-50%, -50%) scale(0) rotate(0deg); opacity: 1; }
@@ -1048,6 +1076,35 @@
   </div>
 
   <div class="panel-section">
+    <h3>What shows on the chart</h3>
+    <div class="display-mode-grid" id="displayModeGrid">
+      <button class="display-mode-card" data-mode="initials">
+        <div class="dm-name">Initials</div>
+        <div class="dm-example">MA</div>
+        <div class="dm-desc">Discreet · default</div>
+      </button>
+      <button class="display-mode-card" data-mode="firstName">
+        <div class="dm-name">First Name</div>
+        <div class="dm-example">Mia</div>
+        <div class="dm-desc">Familiar</div>
+      </button>
+      <button class="display-mode-card" data-mode="fullName">
+        <div class="dm-name">Full Name</div>
+        <div class="dm-example">Mia A.</div>
+        <div class="dm-desc">Most visible</div>
+      </button>
+      <button class="display-mode-card" data-mode="number">
+        <div class="dm-name">Student Number</div>
+        <div class="dm-example">3</div>
+        <div class="dm-desc">Most private</div>
+      </button>
+    </div>
+    <div style="font-size: 12px; color: var(--ink-soft); margin-top: 8px; line-height: 1.4;">
+      Reports and your dashboard always show full names. This only changes what visitors and the class see on the projected chart.
+    </div>
+  </div>
+
+  <div class="panel-section">
     <h3>Levels (top to bottom)</h3>
     <div id="levelsList"></div>
     <button class="add-btn" id="addLevelBtn">+ Add level</button>
@@ -1235,6 +1292,7 @@ function makeClass(name) {
     id: 'c' + Date.now() + Math.floor(Math.random() * 1000),
     name: name || "New Class",
     theme: "classic",
+    displayMode: 'initials', // 'initials' | 'firstName' | 'fullName' | 'number'
     levels: defaultLevels(),
     students: defaultStudents(),
     log: []
@@ -1250,6 +1308,7 @@ const DEFAULT_STATE = {
     id: 'c1',
     name: "Mrs. Anderson's Class",
     theme: "classic",
+    displayMode: 'initials',
     levels: defaultLevels(),
     students: defaultStudents(),
     log: []
@@ -1260,6 +1319,9 @@ function migrate(saved) {
   if (saved && saved.version === 2 && Array.isArray(saved.classes)) {
     if (typeof saved.subMode !== 'boolean') saved.subMode = false;
     if (!Array.isArray(saved.subNotes)) saved.subNotes = [];
+    saved.classes.forEach(c => {
+      if (!c.displayMode) c.displayMode = 'initials';
+    });
     return saved;
   }
   if (saved && saved.className && Array.isArray(saved.levels)) {
@@ -1272,6 +1334,7 @@ function migrate(saved) {
         id: 'c1',
         name: saved.className,
         theme: saved.theme || 'classic',
+        displayMode: 'initials',
         levels: saved.levels,
         students: saved.students || [],
         log: saved.log || []
@@ -1379,7 +1442,10 @@ function renderChart() {
       <div class="clip-zone"></div>
     `;
     const zone = levelEl.querySelector('.clip-zone');
-    studentsHere.forEach(student => zone.appendChild(makeClip(student, color)));
+    studentsHere.forEach(student => {
+      const idxInClass = cls.students.findIndex(s => s.id === student.id);
+      zone.appendChild(makeClip(student, color, cls.displayMode || 'initials', idxInClass));
+    });
     if (studentsHere.length === 0) {
       const hint = document.createElement('div');
       hint.className = 'empty-hint';
@@ -1399,14 +1465,41 @@ function initialsOf(name) {
   return (parts[0].charAt(0) + parts[1].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
 }
 
-function makeClip(student, color) {
+function displayTextFor(student, mode, indexInClass) {
+  const name = String(student.name || '').trim();
+  switch (mode) {
+    case 'fullName': return name || '?';
+    case 'firstName': {
+      const first = name.split(/\s+/)[0] || '?';
+      return first;
+    }
+    case 'number': return String((indexInClass || 0) + 1);
+    case 'initials':
+    default:
+      return initialsOf(name);
+  }
+}
+
+function clipFontSize(textLen) {
+  // Hand-tuned to fit nicely inside the 24px-wide pin body
+  if (textLen <= 1) return 20;
+  if (textLen <= 2) return 17;
+  if (textLen <= 3) return 14;
+  if (textLen <= 4) return 12.5;
+  if (textLen <= 6) return 10.5;
+  if (textLen <= 9) return 8;
+  if (textLen <= 12) return 6.5;
+  return 5.5;
+}
+
+function makeClip(student, color, displayMode, indexInClass) {
   const clip = document.createElement('div');
   clip.className = 'clip';
   clip.dataset.studentId = student.id;
   const c = avatarColor(student.id);
   const dark = '#2C2A4A';
-  const initials = initialsOf(student.name);
-  const fs = initials.length === 1 ? 20 : initials.length === 2 ? 16 : 12.5;
+  const text = displayTextFor(student, displayMode || 'initials', indexInClass || 0);
+  const fs = clipFontSize(text.length);
   clip.innerHTML = `
     <svg class="clip-shape" viewBox="0 0 36 76" aria-hidden="true">
       <path d="M8 46 L6.5 70 Q6.5 72 8.5 72 L13.5 72 Q15.5 72 15.5 70 L15.5 46 Z" fill="${c}" stroke="${dark}" stroke-width="2" stroke-linejoin="round"/>
@@ -1416,7 +1509,7 @@ function makeClip(student, color) {
       <ellipse cx="18" cy="46" rx="14.5" ry="6" fill="#CDD2D7" stroke="${dark}" stroke-width="2"/>
       <ellipse cx="18" cy="46" rx="5.5" ry="2.6" fill="#9AA0A7" stroke="${dark}" stroke-width="0.8"/>
       <text x="18" y="24" text-anchor="middle" dominant-baseline="central"
-            font-family="'Patrick Hand','Comic Sans MS',cursive" font-size="${fs}" fill="${dark}">${escapeHtml(initials)}</text>
+            font-family="'Patrick Hand','Comic Sans MS',cursive" font-size="${fs}" fill="${dark}">${escapeHtml(text)}</text>
     </svg>
   `;
   clip.addEventListener('pointerdown', (e) => {
@@ -1662,6 +1755,11 @@ function renderPanel() {
     c.classList.toggle('active', c.dataset.theme === cls.theme);
   });
 
+  const currentMode = cls.displayMode || 'initials';
+  document.querySelectorAll('.display-mode-card').forEach(c => {
+    c.classList.toggle('active', c.dataset.mode === currentMode);
+  });
+
   const levelsList = document.getElementById('levelsList');
   levelsList.innerHTML = '';
   cls.levels.forEach((level) => {
@@ -1724,6 +1822,14 @@ document.getElementById('themesGrid').addEventListener('click', (e) => {
   const card = e.target.closest('.theme-card');
   if (!card) return;
   currentClass().theme = card.dataset.theme;
+  saveState();
+  render();
+});
+
+document.getElementById('displayModeGrid').addEventListener('click', (e) => {
+  const card = e.target.closest('.display-mode-card');
+  if (!card) return;
+  currentClass().displayMode = card.dataset.mode;
   saveState();
   render();
 });
