@@ -5,3 +5,5 @@ node_modules/
 .vercel
 *.log
 Thumbs.db
+.deploy.env
+*.zip
