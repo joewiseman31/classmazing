@@ -639,6 +639,57 @@
 
   body.theme-boho .theme-swatch { border: none; }
 
+  /* Activity chip in header */
+  .activity-chip {
+    background: white;
+    border: 2.5px solid var(--ink);
+    color: var(--ink);
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    margin-top: 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 2px 0 var(--ink);
+    transition: transform 0.12s, box-shadow 0.12s;
+  }
+  body.theme-boho .activity-chip { border-width: 1px; box-shadow: 0 1px 3px var(--shadow); }
+  .activity-chip:hover { transform: translateY(-1px); box-shadow: 0 3px 0 var(--ink); }
+  body.theme-boho .activity-chip:hover { box-shadow: 0 3px 8px var(--shadow); }
+  .activity-chip.has-activity { background: var(--accent-soft); border-color: var(--accent); }
+  .activity-icon { font-size: 15px; line-height: 1; }
+
+  .activity-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 14px;
+    max-height: 350px;
+    overflow-y: auto;
+  }
+  .activity-option {
+    padding: 12px 16px;
+    border: 2px solid var(--ink);
+    border-radius: 12px;
+    background: white;
+    cursor: pointer;
+    text-align: left;
+    font-family: 'Fredoka', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--ink);
+    box-shadow: 0 2px 0 var(--ink);
+    transition: transform 0.1s, box-shadow 0.1s;
+  }
+  body.theme-boho .activity-option { border-width: 1px; border-color: rgba(45,42,38,0.15); box-shadow: none; }
+  .activity-option:hover { transform: translateY(-1px); box-shadow: 0 3px 0 var(--ink); }
+  body.theme-boho .activity-option:hover { transform: none; background: var(--accent-soft); }
+  .activity-option.current { background: var(--accent-soft); border-color: var(--accent); }
+
   /* Display mode picker */
   .display-mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .display-mode-card {
@@ -1008,6 +1059,10 @@
       <button class="switcher-caret" id="switcherCaret" aria-label="Switch class">▼</button>
     </div>
     <div class="subtitle" id="dateLine"></div>
+    <button class="activity-chip" id="activityChip" aria-label="Set current activity">
+      <span class="activity-icon">📍</span>
+      <span id="activityChipText">No activity</span>
+    </button>
     <div class="switcher-menu" id="switcherMenu" role="menu"></div>
   </div>
   <div class="controls">
@@ -1101,6 +1156,15 @@
     </div>
     <div style="font-size: 12px; color: var(--ink-soft); margin-top: 8px; line-height: 1.4;">
       Reports and your dashboard always show full names. This only changes what visitors and the class see on the projected chart.
+    </div>
+  </div>
+
+  <div class="panel-section">
+    <h3>Your day's activities</h3>
+    <div id="activitiesList"></div>
+    <button class="add-btn" id="addActivityBtn">+ Add activity</button>
+    <div style="font-size: 12px; color: var(--ink-soft); margin-top: 8px; line-height: 1.4;">
+      These show up in the activity chip at the top. Set the current one before each block — clip moves get tagged automatically.
     </div>
   </div>
 
@@ -1242,6 +1306,19 @@
   </div>
 </div>
 
+<!-- Activity picker -->
+<div class="modal-back" id="activityModal">
+  <div class="modal">
+    <h3>What's happening right now?</h3>
+    <p>Clip moves get quietly tagged with this so you can see patterns by activity later. Set it once when you start a new block; you don't have to think about it after that.</p>
+    <div class="activity-list" id="activityList"></div>
+    <div class="modal-buttons">
+      <button class="btn" id="activityClear">Clear (no activity)</button>
+      <button class="btn" id="activityCancel">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <!-- Sub leaves a note -->
 <div class="modal-back" id="subNoteModal">
   <div class="modal">
@@ -1287,12 +1364,29 @@ function defaultStudents() {
   return names.map((n, i) => ({ id: 's' + (i + 1), name: n, level: 'l3' }));
 }
 
+function defaultActivities() {
+  return [
+    'Morning Meeting',
+    'Literacy',
+    'Math',
+    'Writing',
+    'Centers',
+    'Specials',
+    'Recess',
+    'Lunch',
+    'Transition',
+    'End of Day'
+  ];
+}
+
 function makeClass(name) {
   return {
     id: 'c' + Date.now() + Math.floor(Math.random() * 1000),
     name: name || "New Class",
     theme: "classic",
     displayMode: 'initials', // 'initials' | 'firstName' | 'fullName' | 'number'
+    activities: defaultActivities(),
+    currentActivity: null,
     levels: defaultLevels(),
     students: defaultStudents(),
     log: []
@@ -1309,6 +1403,8 @@ const DEFAULT_STATE = {
     name: "Mrs. Anderson's Class",
     theme: "classic",
     displayMode: 'initials',
+    activities: defaultActivities(),
+    currentActivity: null,
     levels: defaultLevels(),
     students: defaultStudents(),
     log: []
@@ -1321,6 +1417,8 @@ function migrate(saved) {
     if (!Array.isArray(saved.subNotes)) saved.subNotes = [];
     saved.classes.forEach(c => {
       if (!c.displayMode) c.displayMode = 'initials';
+      if (!Array.isArray(c.activities)) c.activities = defaultActivities();
+      if (c.currentActivity === undefined) c.currentActivity = null;
     });
     return saved;
   }
@@ -1335,6 +1433,8 @@ function migrate(saved) {
         name: saved.className,
         theme: saved.theme || 'classic',
         displayMode: 'initials',
+        activities: defaultActivities(),
+        currentActivity: null,
         levels: saved.levels,
         students: saved.students || [],
         log: saved.log || []
@@ -1393,6 +1493,7 @@ function render() {
   document.getElementById('className').textContent = cls.name;
   document.getElementById('dateLine').textContent = todayString();
   document.getElementById('subBanner').classList.toggle('visible', !!state.subMode);
+  renderActivityChip();
   renderChart();
   renderPanel();
   renderSwitcher();
@@ -1421,6 +1522,20 @@ function renderSubNotes() {
         </div>
       `;
     }).join('');
+}
+
+function renderActivityChip() {
+  const cls = currentClass();
+  const chip = document.getElementById('activityChip');
+  const text = document.getElementById('activityChipText');
+  const active = cls.currentActivity;
+  if (active) {
+    text.textContent = active;
+    chip.classList.add('has-activity');
+  } else {
+    text.textContent = 'Set activity';
+    chip.classList.remove('has-activity');
+  }
 }
 
 function renderChart() {
@@ -1635,6 +1750,7 @@ function moveStudent(studentId, newLevelId, x, y) {
     from: fromName,
     to: toName,
     direction: toIdx < fromIdx ? 'up' : 'down',
+    activity: cls.currentActivity || null,
     time: nowTime(),
     ts: Date.now()
   });
@@ -1785,6 +1901,18 @@ function renderPanel() {
     studentsList.appendChild(row);
   });
 
+  const activitiesList = document.getElementById('activitiesList');
+  activitiesList.innerHTML = '';
+  (cls.activities || []).forEach((a, i) => {
+    const row = document.createElement('div');
+    row.className = 'row';
+    row.innerHTML = `
+      <input type="text" data-activity-index="${i}" value="${escapeHtml(a)}" placeholder="Activity name">
+      <button class="icon-btn" data-action="remove-activity" data-activity-index="${i}" title="Remove">×</button>
+    `;
+    activitiesList.appendChild(row);
+  });
+
   const log = document.getElementById('activityLog');
   if (cls.log.length === 0) {
     log.innerHTML = '<div class="log-empty">No clip movements yet today.</div>';
@@ -1886,6 +2014,69 @@ document.getElementById('addStudentBtn').addEventListener('click', () => {
     name: 'New Student',
     level: middleLevel
   });
+  saveState();
+  render();
+});
+
+/* ----- Activity context ----- */
+function openActivityPicker() {
+  const cls = currentClass();
+  const list = document.getElementById('activityList');
+  list.innerHTML = (cls.activities || []).map(a =>
+    `<button class="activity-option ${a === cls.currentActivity ? 'current' : ''}" data-activity="${escapeHtml(a)}">${escapeHtml(a)}</button>`
+  ).join('');
+  document.getElementById('activityModal').classList.add('open');
+}
+
+document.getElementById('activityChip').addEventListener('click', openActivityPicker);
+
+document.getElementById('activityList').addEventListener('click', (e) => {
+  const btn = e.target.closest('.activity-option');
+  if (!btn) return;
+  currentClass().currentActivity = btn.dataset.activity;
+  saveState();
+  document.getElementById('activityModal').classList.remove('open');
+  render();
+});
+
+document.getElementById('activityClear').addEventListener('click', () => {
+  currentClass().currentActivity = null;
+  saveState();
+  document.getElementById('activityModal').classList.remove('open');
+  render();
+});
+
+document.getElementById('activityCancel').addEventListener('click', () => {
+  document.getElementById('activityModal').classList.remove('open');
+});
+
+document.getElementById('activitiesList').addEventListener('input', (e) => {
+  if (e.target.matches('input[data-activity-index]')) {
+    const cls = currentClass();
+    const idx = parseInt(e.target.dataset.activityIndex, 10);
+    const oldName = cls.activities[idx];
+    cls.activities[idx] = e.target.value;
+    // If they're renaming the current activity, keep it as current
+    if (cls.currentActivity === oldName) cls.currentActivity = e.target.value;
+    saveState();
+    renderActivityChip();
+  }
+});
+
+document.getElementById('activitiesList').addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-action="remove-activity"]');
+  if (!btn) return;
+  const cls = currentClass();
+  const idx = parseInt(btn.dataset.activityIndex, 10);
+  const removed = cls.activities[idx];
+  cls.activities.splice(idx, 1);
+  if (cls.currentActivity === removed) cls.currentActivity = null;
+  saveState();
+  render();
+});
+
+document.getElementById('addActivityBtn').addEventListener('click', () => {
+  currentClass().activities.push('New activity');
   saveState();
   render();
 });
@@ -2551,6 +2742,7 @@ document.addEventListener('keydown', (e) => {
     document.getElementById('deleteClassModal').classList.remove('open');
     document.getElementById('subNoteModal').classList.remove('open');
     document.getElementById('moveSheet').classList.remove('open');
+    document.getElementById('activityModal').classList.remove('open');
     document.getElementById('switcherMenu').classList.remove('open');
   }
 });
